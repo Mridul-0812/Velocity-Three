@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UEFA STRIKER | PRO REVOLUTION</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Syncopate:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-red: #ff0055;
+            --pitch-green: #1a472a;
+            --ui-panel: rgba(0, 0, 0, 0.9);
+            --gold: #ffcc00;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            background: #000;
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center, #111 0%, #000 100%);
+        }
+
+        canvas {
+            background: var(--pitch-green);
+            box-shadow: 0 0 100px rgba(0,0,0,0.8);
+            cursor: none;
+            border: 2px solid #333;
+        }
+
+        /* SUPERIOR HUD */
+        .hud {
+            position: absolute;
+            top: 0; width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 40px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .panel {
+            background: var(--ui-panel);
+            border-bottom: 3px solid var(--neon-red);
+            padding: 15px 30px;
+            clip-path: polygon(0 0, 100% 0, 90% 100%, 10% 100%);
+        }
+
+        .score-big { font-size: 32px; color: var(--neon-red); font-weight: 900; text-shadow: 0 0 10px var(--neon-red); }
+        .label-mini { font-size: 10px; text-transform: uppercase; letter-spacing: 3px; color: #aaa; text-align: center; }
+
+        /* NAVIGATION BUTTONS */
+        .nav-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .btn-ui {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #fff;
+            padding: 12px 25px;
+            font-family: 'Orbitron';
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 2px;
+        }
+
+        .btn-ui:hover {
+            background: var(--neon-red);
+            border-color: #fff;
+            box-shadow: 0 0 15px var(--neon-red);
+        }
+
+        /* POWER METER SYSTEM */
+        #power-meter-wrapper {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 12px;
+            background: #111;
+            border: 2px solid #333;
+            border-radius: 20px;
+            overflow: hidden;
+            display: none;
+        }
+
+        #power-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00ff88, #ffff00, #ff0055);
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.5);
+        }
+
+        /* OVERLAYS */
+        #menu-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .mode-option {
+            width: 450px;
+            padding: 25px;
+            margin: 15px;
+            background: #0a0a0a;
+            border: 1px solid #222;
+            cursor: pointer;
+            transition: 0.4s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mode-option:hover {
+            border-color: var(--neon-red);
+            background: #150005;
+            transform: scale(1.02) translateY(-5px);
+        }
+
+        .mode-option h2 { margin: 0; font-size: 24px; color: #fff; }
+        .mode-option p { margin: 10px 0 0; font-size: 11px; color: #666; letter-spacing: 1px; }
+
+        #fx-msg {
+            position: absolute;
+            top: 40%; width: 100%;
+            text-align: center;
+            font-size: 80px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 30px #ff0055;
+            pointer-events: none;
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        /* CONTROLS GUIDE */
+        .controls-hint {
+            position: absolute;
+            bottom: 30px;
+            right: 40px;
+            color: #555;
+            font-size: 11px;
+            text-align: right;
+            line-height: 1.8;
+        }
+        b { color: var(--gold); }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div class="nav-controls">
+        <button class="btn-ui" onclick="location.href='index.html'">← Exit to Hub</button>
+        <button class="btn-ui" onclick="Engine.resetBall()">↻ Reset Ball</button>
+    </div>
+
+    <div class="hud">
+        <div class="panel">
+            <div class="label-mini">Goals</div>
+            <div id="ui-score" class="score-big">00</div>
+        </div>
+        <div class="panel">
+            <div class="label-mini">Mode</div>
+            <div id="ui-mode" class="score-big" style="font-size: 18px; color: var(--gold);">NONE</div>
+        </div>
+    </div>
+
+    <div id="power-meter-wrapper">
+        <div id="power-bar-fill"></div>
+    </div>
+
+    <div id="fx-msg">GOAL!</div>
+
+    <div class="controls-hint">
+        Dribble: <b>ARROW KEYS</b><br>
+        Power Up: <b>HOLD SPACE</b><br>
+        Shoot: <b>RELEASE SPACE</b>
+    </div>
+
+    <div id="menu-overlay">
+        <h1 style="font-family: 'Syncopate'; letter-spacing: 15px; margin-bottom: 50px;">FOOTBALL PRO</h1>
+        <div class="mode-option" onclick="Engine.initMode('PENALTY')">
+            <h2>PENALTY SHOOTOUT</h2>
+            <p>Direct shot against the keeper from 12 yards.</p>
+        </div>
+        <div class="mode-option" onclick="Engine.initMode('FREEKICK')">
+            <h2>FREE KICK MASTER</h2>
+            <p>Navigate the defensive wall with curl and height.</p>
+        </div>
+        <div class="mode-option" onclick="Engine.initMode('DRIBBLE')">
+            <h2>THE DRIBBLE RUN</h2>
+            <p>Move left/right to evade defenders before striking.</p>
+        </div>
+    </div>
+
+    <canvas id="mainCanvas"></canvas>
+</div>
+
+<script>
+/**
+ * THE ULTIMATE FOOTBALL ENGINE V2.5 PRO
+ * - New Feature: Aiming logic with Arrow Keys + Space
+ * - New Feature: Visual trajectory sighter
+ * - New Feature: Dynamic Keeper reaction
+ */
+
+ const Engine = {
+    canvas: document.getElementById('mainCanvas'),
+    ctx: null,
+    mode: null,
+    state: 'MENU', // MENU, IDLE, POWERING, IN_AIR, OUTCOME
+    
+    // Core Dimensions
+    width: 1200,
+    height: 850,
+    
+    // Game Props
+    score: 0,
+    power: 0,
+    maxPower: 100,
+    powerDirection: 1,
+    aimAngle: 0, // NEW: 0 is center, negative is left, positive is right
+    
+    // Entities
+    ball: { x: 600, y: 750, z: 0, vx: 0, vy: 0, vz: 0, r: 12, spin: 0 },
+    player: { x: 600, y: 780 },
+    keeper: { x: 600, y: 150, targetX: 600, vx: 0, stretch: 0, angle: 0 },
+    defenders: [],
+    
+    // Control Mapping
+    keys: { space: false, left: false, right: false },
+
+    initMode(selected) {
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.mode = selected;
+        this.state = 'IDLE';
+        
+        document.getElementById('menu-overlay').style.display = 'none';
+        document.getElementById('ui-mode').innerText = selected;
+        
+        this.setupEntities();
+        this.addEventListeners();
+        this.run();
+    },
+
+    setupEntities() {
+        this.defenders = [];
+        if(this.mode === 'FREEKICK') {
+            for(let i=0; i<4; i++) {
+                this.defenders.push({ x: 520 + (i*55), y: 400, w: 40, h: 80, type: 'wall' });
+            }
+        }
+        if(this.mode === 'DRIBBLE') {
+            for(let i=0; i<6; i++) {
+                let startX = Math.random() * 600 + 300;
+                let startY = 150 + (i * 100); // Distributed along the pitch
+                this.defenders.push({ 
+                    x: startX, 
+                    y: startY, 
+                    originX: startX,
+                    originY: startY,
+                    vx: 0, vy: 0,
+                    type: 'patrol',
+                    state: 'GUARDING',
+                    visionRange: 200,
+                    aggression: 0.04, 
+                    maxSpeed: 3,
+                    stumble: false
+                });
+            }
+        }
+        this.resetBall();
+    },
+
+    resetBall() {
+        this.state = 'IDLE';
+        this.ball.x = 600;
+        // Start the player at the very bottom of the pitch
+        this.ball.y = (this.mode === 'DRIBBLE') ? 800 : 700;
+        this.ball.z = 0; 
+        this.ball.vx = 0; this.ball.vy = 0; this.ball.vz = 0;
+        this.power = 0; 
+        this.aimAngle = 0;
+        this.keeper.x = 600; 
+        this.keeper.targetX = 600;
+        
+        // Fix: Reset all defender positions so they don't stay near the player spawn
+        this.defenders.forEach(d => {
+            if(d.type === 'patrol') {
+                d.x = d.originX;
+                d.y = d.originY;
+                d.vx = 0;
+                d.vy = 0;
+                d.state = 'GUARDING';
+            }
+        });
+
+        document.getElementById('power-meter-wrapper').style.display = 'none';
+    },
+
+    addEventListeners() {
+        window.addEventListener('keydown', (e) => {
+            if(e.code === 'Space') {
+                if(this.state === 'IDLE') {
+                    this.state = 'POWERING';
+                    document.getElementById('power-meter-wrapper').style.display = 'block';
+                }
+                this.keys.space = true;
+            }
+            if(e.code === 'ArrowLeft' || e.key === 'a') this.keys.left = true;
+            if(e.code === 'ArrowRight' || e.key === 'd') this.keys.right = true;
+            if(e.code === 'ArrowUp' || e.key === 'w') this.keys.up = true;
+            if(e.code === 'ArrowDown' || e.key === 's') this.keys.down = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if(e.code === 'Space' && this.state === 'POWERING') this.shoot();
+            if(e.code === 'Space') this.keys.space = false;
+            if(e.code === 'ArrowLeft' || e.key === 'a') this.keys.left = false;
+            if(e.code === 'ArrowRight' || e.key === 'd') this.keys.right = false;
+            if(e.code === 'ArrowUp' || e.key === 'w') this.keys.up = false;
+            if(e.code === 'ArrowDown' || e.key === 's') this.keys.down = false;
+        });
+    },
+
+    shoot() {
+        this.state = 'IN_AIR';
+        const finalPower = this.power / 100;
+        
+        this.ball.vz = 3 + (finalPower * 18);
+        
+        // FIX: The base horizontal speed (vx) should just be the aimSpread.
+        // We removed the (this.ball.x - 600) offset which was causing the drift.
+        const aimSpread = (this.aimAngle * 0.18);
+        this.ball.vx = aimSpread; 
+        
+        this.ball.vy = -12 - (finalPower * 20);
+
+        // --- KEEPER BRAIN ---
+        const RNG = Math.random();
+        let reactionDelay = 150 + (Math.random() * 200);
+        let targetVariation = (Math.random() - 0.5) * 100;
+
+        if (RNG < 0.2) { 
+            reactionDelay = 0; 
+            targetVariation = (Math.random() - 0.5) * 40;
+        } else if (RNG > 0.9) {
+            reactionDelay = 500;
+        }
+
+        setTimeout(() => {
+            if (Math.random() < 0.12 && Math.abs(this.aimAngle) > 10) {
+                this.keeper.targetX = 600 - (this.aimAngle * 4); 
+            } else {
+                // Keeper still dives toward the absolute goal position
+                this.keeper.targetX = 600 + (this.aimAngle * 4.5) + targetVariation;
+            }
+        }, reactionDelay); 
+    },
+
+    update() {
+        // --- 1. POWERING & AIMING ---
+        if(this.state === 'POWERING') {
+            this.power += 2.5 * this.powerDirection;
+            if(this.power >= 100 || this.power <= 0) this.powerDirection *= -1;
+            document.getElementById('power-bar-fill').style.width = this.power + '%';
+    
+            if(this.keys.left) this.aimAngle -= 1.8;
+            if(this.keys.right) this.aimAngle += 1.8;
+            this.aimAngle = Math.max(-50, Math.min(50, this.aimAngle));
+        }
+    
+        // --- 2. OMNI-DIRECTIONAL DRIBBLE SYSTEM ---
+        if(this.state === 'IDLE' && this.mode === 'DRIBBLE') {
+            // Horizontal Movement (Left/Right)
+            if(this.keys.left && this.ball.x > 310) this.ball.x -= 5.5;
+            if(this.keys.right && this.ball.x < 890) this.ball.x += 5.5;
+            
+            // Vertical Movement (Forward/Backward) - NEW
+            if(this.keys.up && this.ball.y > 280) this.ball.y -= 5.0; 
+            if(this.keys.down && this.ball.y < 820) this.ball.y += 5.0;
+    
+            // DEFENDER AI BRAIN
+            this.defenders.forEach(d => {
+                if(d.type === 'patrol') {
+                    const distToPlayer = Math.hypot(this.ball.x - d.x, this.ball.y - d.y);
+                    
+                    // Decision Making: Hunt if player is nearby and in front
+                    if (distToPlayer < (d.visionRange || 200) && this.ball.y > d.y - 50 && !d.stumble) {
+                        d.state = 'CHASING';
+                    } else {
+                        d.state = 'GUARDING';
+                    }
+    
+                    if (d.state === 'CHASING') {
+                        // Predictive Tracking
+                        let targetX = this.ball.x;
+                        let targetY = this.ball.y + 10;
+                        d.vx += (targetX - d.x) * (d.aggression || 0.04);
+                        d.vy += (targetY - d.y) * (d.aggression || 0.04);
+                    } else {
+                        // Return to original lane and patrol
+                        let patrolTargetX = d.originX + Math.sin(Date.now() * 0.0015) * (d.patrolRange || 100);
+                        d.vx += (patrolTargetX - d.x) * 0.03;
+                        d.vy += (d.originY - d.y) * 0.03;
+                    }
+    
+                    // Physics & Inertia
+                    d.vx *= 0.92; 
+                    d.vy *= 0.92;
+                    
+                    const speed = Math.hypot(d.vx, d.vy);
+                    const maxS = d.maxSpeed || 3.5;
+                    if (speed > maxS) {
+                        d.vx = (d.vx / speed) * maxS;
+                        d.vy = (d.vy / speed) * maxS;
+                    }
+    
+                    d.x += d.vx;
+                    d.y += d.vy;
+    
+                    // Collision Check
+                    if(distToPlayer < 38 && !d.stumble) {
+                        this.triggerOutcome("TACKLED!", "#ff0055");
+                    }
+                }
+            });
+        }
+    
+        // --- 3. KEEPER DYNAMICS ---
+        let oldKx = this.keeper.x;
+        let kSpeed = (this.state === 'IN_AIR') ? 0.18 : 0.08; 
+        this.keeper.x += (this.keeper.targetX - this.keeper.x) * kSpeed;
+        this.keeper.vx = this.keeper.x - oldKx;
+        this.keeper.angle = this.keeper.vx * 0.08; 
+        this.keeper.stretch = Math.abs(this.keeper.vx) * 2;
+    
+        // --- 4. BALL IN-AIR PHYSICS ---
+        if(this.state === 'IN_AIR') {
+            this.ball.x += this.ball.vx;
+            this.ball.y += this.ball.vy;
+            this.ball.z += this.ball.vz;
+            this.ball.vz -= 0.65; // Gravity
+    
+            if(this.ball.y < 150) this.checkGoal();
+    
+            if(this.ball.z < 0) {
+                this.ball.z = 0;
+                this.ball.vz *= -0.35; // Friction bounce
+                this.ball.vx *= 0.85;
+                this.ball.vy *= 0.85;
+            }
+    
+            // Defensive Wall Collision (Free Kick Mode)
+            this.defenders.forEach(d => {
+                if(d.type === 'wall' && Math.abs(this.ball.y - d.y) < 20) {
+                    if(Math.abs(this.ball.x - d.x) < 30 && this.ball.z < 65) {
+                        this.ball.vx *= -1.2;
+                        this.ball.vz = 3;
+                    }
+                }
+            });
+    
+            if(this.ball.y < -100 || Math.abs(this.ball.x - 600) > 600) {
+                this.resetBall();
+            }
+        }
+    },
+
+    checkGoal() {
+        if(this.state !== 'IN_AIR') return;
+
+        const inGoalX = this.ball.x > 450 && this.ball.x < 750;
+        const inGoalHeight = this.ball.z < 100 && this.ball.z > 0;
+
+        if(inGoalX && inGoalHeight) {
+            let distToKeeper = Math.abs(this.ball.x - this.keeper.x);
+            
+            // REDUCED SAVE RADIUS: From 55 down to 35. 
+            // Now he has to be much closer to the ball to stop it.
+            if(distToKeeper < 35 && this.ball.z < 90) {
+                this.triggerOutcome("SAVED!", "#ffcc00");
+            } else {
+                this.score++;
+                this.triggerOutcome("GOAL!!", "#00ff88");
+                document.getElementById('ui-score').innerText = this.score.toString().padStart(2, '0');
+            }
+        } else if (this.ball.y < 140) {
+            this.triggerOutcome("MISS!", "#555");
+        }
+    },
+
+    triggerOutcome(txt, color) {
+        this.state = 'OUTCOME';
+        const fx = document.getElementById('fx-msg');
+        fx.innerText = txt;
+        fx.style.color = color;
+        fx.style.opacity = 1;
+        
+        setTimeout(() => {
+            fx.style.opacity = 0;
+            this.resetBall();
+        }, 1800);
+    },
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.width, this.height);
+
+        this.drawPitch(ctx);
+        this.drawGoal(ctx);
+
+        // 1. Defenders (Wall or Patrol)
+        this.defenders.forEach(d => {
+            ctx.fillStyle = d.type === 'wall' ? '#fff' : '#ff0055';
+            ctx.fillRect(d.x - 15, d.y - 40, 30, 60);
+            ctx.fillStyle = '#ffdbac';
+            ctx.beginPath(); ctx.arc(d.x, d.y - 50, 10, 0, Math.PI*2); ctx.fill();
+        });
+
+        // 2. Humanized Diving Keeper
+        ctx.save();
+        // Pivot point at the keeper's feet level (approx 150y)
+        ctx.translate(this.keeper.x, 150); 
+        ctx.rotate(this.keeper.angle || 0); // Tilt body based on dive speed
+
+        // Keeper Shadow (on the grass)
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.ellipse(0, 40, 30, 10, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // Arms (They extend based on dive velocity/stretch)
+        ctx.fillStyle = '#ffdbac';
+        let armStretch = this.keeper.stretch || 0;
+        // Left Arm
+        ctx.fillRect(-35 - armStretch, -40, 20 + armStretch, 12);
+        // Right Arm
+        ctx.fillRect(15, -40, 20 + armStretch, 12);
+
+        // Jersey (Body)
+        ctx.fillStyle = '#ffcc00'; // Keeper Yellow
+        ctx.fillRect(-20, -45, 40, 65); 
+
+        // Head
+        ctx.fillStyle = '#ffdbac';
+        ctx.beginPath(); 
+        ctx.arc(0, -55, 14, 0, Math.PI * 2); 
+        ctx.fill();
+
+        // Shorts
+        ctx.fillStyle = '#222';
+        ctx.fillRect(-20, 20, 40, 15);
+        
+        ctx.restore();
+
+        // 3. Aim Sighter (Visual guide while charging)
+        if(this.state === 'POWERING') {
+            ctx.beginPath();
+            ctx.setLineDash([8, 8]);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+            ctx.lineWidth = 2;
+            ctx.moveTo(this.ball.x, this.ball.y);
+            // Projection line shows where the ball is headed
+            ctx.lineTo(this.ball.x + (this.aimAngle * 6), this.ball.y - 150);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // 4. The Ball
+        this.drawBall(ctx);
+
+        // 5. Player Position Indicator (The "Selection" Circle)
+        if(this.state === 'IDLE' || this.state === 'POWERING') {
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.beginPath(); 
+            ctx.arc(this.ball.x, this.ball.y + 40, 25, 0, Math.PI*2); 
+            ctx.fill();
+        }
+    },
+
+    drawPitch(ctx) {
+        for(let i=0; i<10; i++) {
+            ctx.fillStyle = i%2===0 ? '#1a472a' : '#1d4d2e';
+            ctx.fillRect(0, i*85, this.width, 85);
+        }
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(300, 0, 600, 250); 
+        ctx.beginPath(); ctx.arc(600, 250, 100, 0, Math.PI); ctx.stroke();
+        ctx.beginPath(); ctx.arc(600, 700, 3, 0, Math.PI*2); ctx.fill();
+    },
+
+    drawGoal(ctx) {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 10;
+        ctx.strokeRect(450, 50, 300, 100);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        for(let i=450; i<=750; i+=15) {
+            ctx.beginPath(); ctx.moveTo(i, 50); ctx.lineTo(i, 150); ctx.stroke();
+        }
+    },
+
+    drawBall(ctx) {
+        // Dynamic Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.arc(this.ball.x, this.ball.y, this.ball.r * (1 + this.ball.z*0.01), 0, Math.PI*2);
+        ctx.fill();
+
+        // Ball Surface
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(this.ball.x, this.ball.y - this.ball.z, this.ball.r, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Hexagon detailing
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 1.5;
+        let bz = this.ball.y - this.ball.z;
+        ctx.beginPath(); ctx.moveTo(this.ball.x-5, bz-5); ctx.lineTo(this.ball.x+5, bz+5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(this.ball.x+5, bz-5); ctx.lineTo(this.ball.x-5, bz+5); ctx.stroke();
+    },
+
+    run() {
+        this.update();
+        this.draw();
+        requestAnimationFrame(() => this.run());
+    }
+};
+</script>
+</body>
+</html>

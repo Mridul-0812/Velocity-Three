@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON CRICKET PRO | ADVANCED PHYSICS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --blue: #00f2ff; --pink: #ff0055; --grass: #12291d; --gold: #ffcc00; }
+        body, html { margin: 0; padding: 0; background: #000; color: #fff; font-family: 'Rajdhani', sans-serif; overflow: hidden; }
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        canvas { background: var(--grass); border: 2px solid #333; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+        
+        .hud { position: absolute; top: 20px; width: 92%; display: flex; justify-content: space-between; pointer-events: none; z-index: 100; }
+        .stat-group { background: rgba(0,0,0,0.85); border-left: 4px solid var(--blue); padding: 12px 25px; min-width: 140px; backdrop-filter: blur(5px); }
+        .stat-label { font-size: 12px; color: #888; letter-spacing: 2px; }
+        .stat-value { font-family: 'Orbitron'; font-size: 28px; color: #fff; text-shadow: 0 0 10px var(--blue); }
+        
+        #menu-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; gap: 20px; }
+        .mode-card { width: 320px; padding: 25px; background: #0a0a0a; border: 1px solid #222; cursor: pointer; text-align: center; transition: 0.4s; }
+        .mode-card:hover { border-color: var(--blue); background: #001a1d; transform: scale(1.05); }
+        
+        #fx-msg { position: absolute; top: 35%; width: 100%; text-align: center; font-family: 'Orbitron'; font-size: 90px; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 200; font-weight: 900; }
+        .controls-hint { position: absolute; bottom: 20px; left: 20px; color: #555; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="menu-overlay">
+        <h1 style="font-family:'Orbitron'; letter-spacing:15px; margin-bottom: 0;">NEON CRICKET</h1>
+        <p style="color: var(--blue); letter-spacing: 4px; margin-bottom: 20px;">PHYSICS ENGINE V2.0</p>
+        
+        <div class="mode-card" onclick="Engine.initMode('BATTING')">
+            <h2 style="margin:0; font-family:'Orbitron';">ENTER OVAL (BAT)</h2>
+            <p style="color: #666; font-size: 13px;">SPACE: Swing | ARROWS: Aim</p>
+        </div>
+
+        <div class="mode-card" onclick="window.location.href='cricket2.html'">
+            <h2 style="margin:0; font-family:'Orbitron';">BOWLING MASTER</h2>
+            <p style="color: #666; font-size: 13px;">GO TO BOWLING MODE</p>
+        </div>
+    </div>
+
+    <div class="hud">
+        <div class="stat-group">
+            <div class="stat-label" id="ui-label-score">SCORE</div>
+            <div id="ui-score" class="stat-value">0 / 0</div>
+        </div>
+        <div class="stat-group" style="border-color: var(--gold);">
+            <div class="stat-label">BALLS</div>
+            <div id="ui-balls" class="stat-value">0</div>
+        </div>
+    </div>
+
+    <div id="fx-msg">SIX!</div>
+    <div class="controls-hint" id="hint-text">Aim with arrows while swinging.</div>
+    <canvas id="gameCanvas"></canvas>
+</div>
+
+<script>
+const Engine = {
+    canvas: document.getElementById('gameCanvas'),
+    ctx: null, width: 1200, height: 800,
+    state: 'MENU', mode: 'BATTING', score: 0, wickets: 0, ballsFaced: 0,
+    ball: { x: 600, y: 150, z: 40, vx: 0, vy: 0, vz: 0, r: 6, active: false, friction: 0.985 },
+    batsman: { x: 600, y: 680, swinging: false, width: 60 },
+    fielders: [],
+    keys: { left: false, right: false },
+
+    initMode(m) {
+        this.mode = m;
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.width = this.width; this.canvas.height = this.height;
+        document.getElementById('menu-overlay').style.display = 'none';
+        
+        this.setupField();
+        this.addListeners();
+        this.resetBall();
+        this.loop();
+    },
+
+    setupField() {
+        this.fielders = [];
+        const pos = [{x:250, y:200}, {x:950, y:200}, {x:450, y:350}, {x:750, y:350}, {x:600, y:100}, {x:300, y:500}, {x:900, y:500}];
+        pos.forEach(p => this.fielders.push({ x: p.x, y: p.y, ox: p.x, oy: p.y, state: 'WAITING', speed: 4.5 + Math.random() }));
+    },
+
+    resetBall() {
+        this.state = 'IDLE';
+        this.ball.active = false;
+        this.ball.x = 600; this.ball.y = 150; this.ball.z = 45;
+        this.ball.vx = 0; this.ball.vy = 0; this.ball.vz = 0;
+        this.batsman.swinging = false;
+        this.fielders.forEach(f => f.state = 'RETURNING');
+        
+        setTimeout(() => { if(this.state === 'IDLE') this.releaseBall(); }, 1800);
+    },
+
+    releaseBall() {
+        const extraRoll = Math.random();
+        
+        // No Ball Logic (5% chance)
+        if (extraRoll < 0.05) {
+            this.triggerOutcome("NO BALL!", varProp('--gold'), 1);
+            return;
+        } 
+        // Wide Logic (10% chance)
+        else if (extraRoll < 0.15) {
+            this.triggerOutcome("WIDE!", varProp('--gold'), 1);
+            return;
+        }
+
+        this.state = 'BOWLED';
+        this.ball.active = true;
+        this.ballsFaced++;
+        document.getElementById('ui-balls').innerText = this.ballsFaced;
+        
+        // Randomized delivery
+        this.ball.vx = (Math.random() - 0.5) * 2.5; 
+        this.ball.vy = 9 + Math.random() * 5;
+        this.ball.vz = -1.2; 
+    },
+
+    addListeners() {
+        window.addEventListener('keydown', (e) => {
+            if(e.code === 'Space') this.swingBat();
+            if(e.code === 'ArrowLeft') this.keys.left = true;
+            if(e.code === 'ArrowRight') this.keys.right = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if(e.code === 'ArrowLeft') this.keys.left = false;
+            if(e.code === 'ArrowRight') this.keys.right = false;
+        });
+    },
+
+    swingBat() {
+        if(this.batsman.swinging || this.state !== 'BOWLED') return;
+        this.batsman.swinging = true;
+        
+        const distY = Math.abs(this.ball.y - this.batsman.y);
+        const distX = this.ball.x - this.batsman.x;
+
+        // Hit Detection Box
+        if(distY < 60 && Math.abs(distX) < 50 && this.ball.z < 55) {
+            this.calculateRebound(distX);
+        }
+        setTimeout(() => { this.batsman.swinging = false; }, 350);
+    },
+
+    calculateRebound(offsetX) {
+        this.state = 'HIT';
+        
+        // Sweet spot logic: Closer to center (offsetX = 0) means more power
+        const sweetSpotMult = 1 - (Math.abs(offsetX) / 60);
+        let batAngle = offsetX * 0.05; 
+        let inputAngle = this.keys.left ? -0.6 : (this.keys.right ? 0.6 : 0);
+        let finalAngle = batAngle + inputAngle;
+
+        const power = (10 + Math.random() * 15) * (0.5 + sweetSpotMult); 
+        this.ball.vx = Math.sin(finalAngle) * power;
+        this.ball.vy = -Math.cos(finalAngle) * power;
+        this.ball.vz = (2 + Math.random() * 10) * sweetSpotMult;
+
+        this.fielders.forEach(f => f.state = 'CHASING');
+    },
+
+    update() {
+        if(!this.ball.active) return;
+        this.ball.x += this.ball.vx;
+        this.ball.y += this.ball.vy;
+        this.ball.z += this.ball.vz;
+
+        // Gravity & Ground Physics
+        if(this.ball.z > 0) this.ball.vz -= 0.3;
+        else {
+            this.ball.z = 0;
+            this.ball.vz = Math.abs(this.ball.vz) * 0.3;
+            this.ball.vx *= this.ball.friction;
+            this.ball.vy *= this.ball.friction;
+        }
+
+        // Scoring Logic
+        if(this.state === 'HIT') {
+            const distFromStart = Math.hypot(this.ball.x - 600, this.ball.y - 700);
+            
+            // Boundary Logic
+            if(distFromStart > 750 || this.ball.x < 0 || this.ball.x > this.width || this.ball.y < 0) {
+                let runs = this.ball.z > 15 ? 6 : 4;
+                this.triggerOutcome(runs === 6 ? "SIX!" : "FOUR!", runs === 6 ? varProp('--blue') : varProp('--gold'), runs);
+                return;
+            }
+
+            // Running between wickets (If ball stops or slowed significantly)
+            const speed = Math.hypot(this.ball.vx, this.ball.vy);
+            if(speed < 0.5 && this.ball.z < 2) {
+                this.calculateRuns(distFromStart);
+            }
+        }
+
+        // Bowled Logic
+        if(this.state === 'BOWLED' && this.ball.y > 710) {
+            if(Math.abs(this.ball.x - 600) < 20 && this.ball.z < 45) {
+                this.triggerOutcome("BOWLED!", varProp('--pink'), 0, true);
+            } else if(this.ball.y > 900) this.resetBall();
+        }
+
+        // Fielder Interaction
+        this.fielders.forEach(f => {
+            if(f.state === 'CHASING') {
+                let angle = Math.atan2(this.ball.y - f.y, this.ball.x - f.x);
+                f.x += Math.cos(angle) * f.speed; 
+                f.y += Math.sin(angle) * f.speed;
+
+                if(Math.hypot(this.ball.x - f.x, this.ball.y - f.y) < 25) {
+                    // Catch Logic
+                    if(this.ball.z > 10 && this.ball.z < 60) {
+                        this.triggerOutcome("CAUGHT!", varProp('--pink'), 0, true);
+                    } else {
+                        // Fielder stopped the ball, calculate runs based on distance
+                        this.calculateRuns(Math.hypot(this.ball.x - 600, this.ball.y - 700));
+                    }
+                }
+            } else if(f.state === 'RETURNING') {
+                f.x += (f.ox - f.x) * 0.03; f.y += (f.oy - f.y) * 0.03;
+            }
+        });
+    },
+
+    calculateRuns(dist) {
+        let runs = 0;
+        if(dist > 500) runs = 3;
+        else if(dist > 300) runs = 2;
+        else if(dist > 100) runs = 1;
+        
+        this.triggerOutcome(runs + (runs === 1 ? " RUN" : " RUNS"), "#fff", runs);
+    },
+
+    triggerOutcome(txt, col, r, out=false) {
+        this.state = 'OUTCOME'; 
+        this.ball.active = false;
+        if(out) this.wickets++; 
+        this.score += r;
+        
+        document.getElementById('ui-score').innerText = `${this.score} / ${this.wickets}`;
+        const fx = document.getElementById('fx-msg');
+        fx.innerText = txt; fx.style.color = col; fx.style.opacity = 1;
+        setTimeout(() => { fx.style.opacity = 0; this.resetBall(); }, 1800);
+    },
+
+    draw() {
+        const ctx = this.ctx; ctx.clearRect(0,0,this.width,this.height);
+        this.drawPitch(ctx);
+        this.fielders.forEach(f => this.drawPlayer(f.x, f.y, varProp('--pink')));
+        this.drawPlayer(600, 120, varProp('--blue'));
+        this.drawPlayer(600, 680, this.batsman.swinging ? '#fff' : varProp('--blue'), true);
+        
+        if(this.ball.active) {
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath(); ctx.arc(this.ball.x, this.ball.y, 5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = varProp('--pink');
+            let s = Math.min(12, 6 * (1 + this.ball.z*0.02));
+            ctx.beginPath(); ctx.arc(this.ball.x, this.ball.y - this.ball.z, s, 0, Math.PI*2); ctx.fill();
+        }
+    },
+
+    drawPitch(ctx) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.arc(600, 400, 750, 0, Math.PI*2); ctx.stroke();
+        ctx.fillStyle = '#4a3526'; ctx.fillRect(565, 150, 70, 560);
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2;
+        ctx.strokeRect(565, 150, 70, 560);
+        ctx.beginPath(); ctx.moveTo(540, 665); ctx.lineTo(660, 665); ctx.stroke();
+        
+        // Stumps
+        ctx.fillStyle = '#fff'; 
+        for(let i=-1; i<=1; i++) {
+            ctx.fillRect(598 + i*8, 710, 3, 7); 
+            ctx.fillRect(598 + i*8, 143, 3, 7);
+        }
+    },
+
+    drawPlayer(x, y, col, isBat=false) {
+        this.ctx.fillStyle = col; this.ctx.fillRect(x-10, y-30, 20, 30);
+        this.ctx.fillStyle = '#ffdbac'; this.ctx.beginPath(); this.ctx.arc(x, y-35, 7, 0, Math.PI*2); this.ctx.fill();
+        if(isBat) {
+            this.ctx.save(); this.ctx.translate(x, y-15);
+            if(this.batsman.swinging) this.ctx.rotate(-Math.PI/2);
+            this.ctx.fillStyle = '#8b4513'; this.ctx.fillRect(8, -25, 6, 40);
+            this.ctx.restore();
+        }
+    },
+
+    loop() { this.update(); this.draw(); requestAnimationFrame(()=>this.loop()); }
+};
+
+function varProp(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+Engine.state = 'MENU';
+</script>
+</body>
+</html>

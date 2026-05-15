@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ULTIMATE SPORTS TRILOGY | PRO EDITION</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Syncopate:wght@700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-gold: #ffcc00;
+            --neon-red: #ff0055;
+            --bg-dark: #050505;
+            --glass: rgba(255, 255, 255, 0.05);
+            --border-glow: 0 0 15px rgba(0, 242, 255, 0.5);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #fff;
+            font-family: 'Rajdhani', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1000px;
+        }
+
+        /* DYNAMIC BACKGROUND ANIMATION */
+        #bg-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: -1;
+            filter: blur(2px);
+        }
+
+        /* THE HUB CONTAINER */
+        #hub-container {
+            position: relative;
+            width: 90vw;
+            max-width: 1400px;
+            /* Changed from 80vh to auto or 100% to let it center naturally */
+            height: auto; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; /* This ensures vertical centering */
+            z-index: 10;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        h1 {
+            font-family: 'Syncopate', sans-serif;
+            font-size: 3.5rem;
+            letter-spacing: 12px;
+            text-transform: uppercase;
+            background: linear-gradient(to bottom, #fff 30%, var(--neon-blue));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.3));
+        }
+
+        .subtitle {
+            font-family: 'Orbitron', sans-serif;
+            color: var(--neon-gold);
+            font-size: 1rem;
+            letter-spacing: 5px;
+            margin-top: 10px;
+        }
+
+        /* GAME SELECTION GRID */
+        .game-grid {
+            display: flex;
+            gap: 30px;
+            width: 100%;
+            justify-content: center;
+            transform-style: preserve-3d;
+        }
+
+        .card {
+            position: relative;
+            width: 350px;
+            height: 480px;
+            background: var(--glass);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 40px 20px;
+        }
+
+        /* 3D TILT EFFECT */
+        .card:hover {
+            transform: translateY(-20px) rotateX(10deg);
+            border-color: var(--active-color);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 20px var(--active-color);
+        }
+
+        .card.cricket { --active-color: var(--neon-gold); }
+        .card.tennis { --active-color: var(--neon-blue); }
+        .card.football { --active-color: var(--neon-red); }
+
+        .card-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+            transition: 0.5s;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .card:hover .card-bg { opacity: 0.7; transform: scale(1.1); }
+
+        .card h2 {
+            font-family: 'Syncopate', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .card p {
+            font-size: 0.9rem;
+            color: #ccc;
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .play-btn {
+            padding: 12px 35px;
+            background: transparent;
+            border: 2px solid var(--active-color);
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            border-radius: 50px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: 0.3s;
+        }
+
+        .card:hover .play-btn {
+            background: var(--active-color);
+            color: #000;
+            box-shadow: 0 0 20px var(--active-color);
+        }
+
+        /* FOOTER STATS */
+        .stats-bar {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            padding: 20px;
+            background: rgba(0,0,0,0.6);
+            border-top: 1px solid var(--neon-blue);
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .stat-item { text-align: center; }
+        .stat-val { display: block; font-size: 1.5rem; color: var(--neon-blue); font-weight: 900; }
+        .stat-label { font-size: 0.7rem; color: #888; text-transform: uppercase; }
+
+        /* ANIMATIONS */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* SCANLINE EFFECT */
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scanlines"></div>
+    <canvas id="bg-canvas"></canvas>
+
+    <div id="hub-container">
+        <header>
+            <h1>SPORTS TRILOGY</h1>
+            <div class="subtitle">SELECT YOUR DISCIPLINE</div>
+        </header>
+
+        <div class="game-grid">
+            <div class="card cricket" onclick="launchGame('cricket')">
+                <div class="card-bg" style="background-image: url('https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80');"></div>
+                <h2>CRICKET<br>REVOLUTION</h2>
+                <p>Master the pitch. Precision timing, fielding AI, and stadium crowds await. Lead your team to glory.</p>
+                <button class="play-btn">Enter Match</button>
+            </div>
+
+            <div class="card tennis" onclick="launchGame('tennis')">
+                <div class="card-bg" style="background-image: url('https://images.pexels.com/photos/209977/pexels-photo-209977.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1');"></div>
+                <h2>TENNIS<br>ACE PRO</h2>
+                <p>High-speed rallies. Face off against the advanced AI. Experience professional singles physics.</p>
+                <button class="play-btn">Start Rally</button>
+            </div>
+
+            <div class="card football" onclick="launchGame('football')">
+                <div class="card-bg" style="background-image: url('https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80');"></div>
+                <h2>UEFA<br>STRIKER</h2>
+                <p>Free kicks, Dribbling, and Penalty shootouts. The ultimate test of skill on the green turf.</p>
+                <button class="play-btn">Kick Off</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /**
+         * HUB ENGINE & BACKGROUND PARTICLES
+         */
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        class Particle {
+            constructor() {
+                this.init();
+            }
+            init() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = (Math.random() - 0.5) * 1.5;
+                this.speedY = (Math.random() - 0.5) * 1.5;
+                this.color = `rgba(0, 242, 255, ${Math.random() * 0.5})`;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            for (let i = 0; i < 100; i++) particles.push(new Particle());
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        // Logic for Launching Games
+        function launchGame(game) {
+            console.log(`Initializing ${game} engine...`);
+            document.body.style.transition = "1s";
+            document.body.style.transform = "scale(2) rotateY(20deg)";
+            document.body.style.opacity = "0";
+            
+            setTimeout(() => {
+                window.location.href = game + ".html";
+            }, 800);
+        }
+
+        // Local Storage Stat Loader (to make it feel persistent/commercial)
+        function loadStats() {
+            document.getElementById('total-runs').innerText = localStorage.getItem('cricket_score') || 0;
+            document.getElementById('goals-scored').innerText = localStorage.getItem('football_goals') || 0;
+            document.getElementById('tennis-rank').innerText = localStorage.getItem('tennis_rank') || 'UNRANKED';
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+        initParticles();
+        animate();
+        loadStats();
+
+        // Mouse Tilt Effect for Hub
+        document.addEventListener('mousemove', (e) => {
+            let xAxis = (window.innerWidth / 2 - e.pageX) / 45;
+            let yAxis = (window.innerHeight / 2 - e.pageY) / 45;
+            document.querySelector('.game-grid').style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+        });
+    </script>
+</body>
+</html>
