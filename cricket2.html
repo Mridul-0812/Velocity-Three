@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON CRICKET | BOWLING MASTER PRO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --blue: #00f2ff; --pink: #ff0055; --grass: #12291d; --gold: #ffcc00; }
+        body, html { margin: 0; padding: 0; background: #000; color: #fff; font-family: 'Rajdhani', sans-serif; overflow: hidden; }
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        canvas { background: var(--grass); border: 2px solid #333; }
+        .hud { position: absolute; top: 20px; width: 92%; display: flex; justify-content: space-between; pointer-events: none; z-index: 100; }
+        .stat-group { background: rgba(0,0,0,0.85); border-left: 4px solid var(--blue); padding: 12px 25px; min-width: 140px; }
+        .stat-value { font-family: 'Orbitron'; font-size: 28px; color: #fff; }
+        .stat-label { font-size: 12px; color: #888; letter-spacing: 2px; }
+        #menu-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        .mode-card { width: 320px; padding: 25px; background: #0a0a0a; border: 1px solid #222; cursor: pointer; text-align: center; }
+        #fx-msg { position: absolute; top: 35%; width: 100%; text-align: center; font-family: 'Orbitron'; font-size: 90px; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 200;}
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="menu-overlay">
+        <h1 style="font-family:'Orbitron'; letter-spacing:15px;">BOWLING MASTER</h1>
+        <div class="mode-card" onclick="Engine.initMode('BOWLING')">
+            <h2>START BOWLING</h2>
+            <p style="color: #666;">Click pitch to aim | Space to bowl</p>
+        </div>
+    </div>
+
+    <div class="hud">
+        <div style="display: flex; gap: 20px;">
+            <div class="stat-group">
+                <div class="stat-label">WICKETS</div>
+                <div id="ui-wickets" class="stat-value">0</div>
+            </div>
+            <div class="stat-group" style="border-left-color: var(--gold);">
+                <div class="stat-label">RUNS CONCEDED</div>
+                <div id="ui-runs" class="stat-value">0</div>
+            </div>
+        </div>
+        <div class="stat-group">
+            <div class="stat-label">BALLS</div>
+            <div id="ui-balls" class="stat-value">0</div>
+        </div>
+    </div>
+
+    <div id="fx-msg">OUT!</div>
+    <canvas id="gameCanvas"></canvas>
+</div>
+
+<script>
+const Engine = {
+    canvas: document.getElementById('gameCanvas'),
+    ctx: null, width: 1200, height: 800,
+    state: 'MENU', wickets: 0, runsConceded: 0, ballsFaced: 0,
+    ball: { x: 600, y: 150, z: 45, vx: 0, vy: 0, vz: 0, r: 6, active: false, friction: 0.985 },
+    bowler: { x: 580, y: 150 }, // The player/bowler position
+    batsman: { x: 600, y: 680, swinging: false },
+    fielders: [],
+    keys: { left: false, right: false },
+    bowlingMarker: { x: 600, y: 500, active: false },
+    aiBatsman: { skill: 0.65, decision: 'WAITING', reactionTimer: 0 }, // Skill lowered for "dumber" batsman
+
+    initMode() {
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.width = this.width; this.canvas.height = this.height;
+        document.getElementById('menu-overlay').style.display = 'none';
+        this.canvas.onclick = (e) => this.handleBowlingClick(e);
+        this.setupListeners();
+        this.setupBowlingField();
+        this.resetBall();
+        this.loop();
+    },
+
+    setupListeners() {
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') this.playerBowl();
+            if (e.code === 'ArrowLeft') this.keys.left = true;
+            if (e.code === 'ArrowRight') this.keys.right = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowLeft') this.keys.left = false;
+            if (e.code === 'ArrowRight') this.keys.right = false;
+        });
+    },
+
+    setupBowlingField() {
+        this.fielders = [];
+        // Strategic "Smart" Field: Slips, covers, and mid-wickets to prevent boundaries
+        const zones = [
+            {x:[520, 550], y:[720, 740]}, // Slip
+            {x:[650, 680], y:[720, 740]}, // Gully
+            {x:[400, 450], y:[500, 550]}, // Mid-wicket
+            {x:[750, 800], y:[500, 550]}, // Cover
+            {x:[300, 350], y:[300, 350]}, // Mid-off
+            {x:[850, 900], y:[300, 350]}  // Mid-on
+        ];
+
+        zones.forEach(z => {
+            const rx = z.x[0] + Math.random() * (z.x[1] - z.x[0]);
+            const ry = z.y[0] + Math.random() * (z.y[1] - z.y[0]);
+            this.fielders.push({ x: rx, y: ry, ox: rx, oy: ry, state: 'WAITING', speed: 8.5 }); // Speed increased for "smarter" fielders
+        });
+    },
+
+    resetBall() {
+        this.state = 'IDLE'; 
+        this.ball.active = false;
+        this.ball.x = 600; this.ball.y = 150; this.ball.z = 45;
+        this.ball.vx = 0; this.ball.vy = 0; this.ball.vz = 0;
+        this.batsman.swinging = false; 
+        this.aiBatsman.decision = 'WAITING';
+        this.fielders.forEach(f => {
+            f.state = 'RETURNING';
+            // Randomly shift position slightly each ball
+            f.ox = f.ox + (Math.random() - 0.5) * 40;
+            f.oy = f.oy + (Math.random() - 0.5) * 40;
+        });
+    },
+
+    handleBowlingClick(e) {
+        if (this.state !== 'IDLE') return;
+        const rect = this.canvas.getBoundingClientRect();
+        this.bowlingMarker.x = e.clientX - rect.left;
+        this.bowlingMarker.y = e.clientY - rect.top;
+        this.bowlingMarker.active = true;
+    },
+
+    playerBowl() {
+        if (this.state !== 'IDLE' || !this.bowlingMarker.active) return;
+        this.state = 'BOWLED'; 
+        this.ball.active = true; 
+        this.ballsFaced++;
+        document.getElementById('ui-balls').innerText = this.ballsFaced;
+        
+        const frames = 40;
+        this.ball.vx = (this.bowlingMarker.x - 600) / frames;
+        this.ball.vy = (this.bowlingMarker.y - 150) / frames;
+        this.ball.vz = -1.1;
+        this.aiBatsman.reactionTimer = 15 + Math.random() * 15;
+    },
+
+    hitBall() {
+        this.state = 'HIT';
+        const shotRoll = Math.random();
+        let power, loft;
+
+        // Dumber Batsman: High probability of mistiming or hitting straight to fielders
+        if (shotRoll > 0.9) { // Rare boundary
+            power = 15 + Math.random() * 5; loft = 6 + Math.random() * 5; 
+        } else if (shotRoll > 0.4) { // Typical 1 or 2 runs
+            power = 8 + Math.random() * 5; loft = 1 + Math.random() * 3; 
+        } else { // Poor shot/edge
+            power = 5 + Math.random() * 4; loft = 0.5 + Math.random() * 1; 
+        }
+
+        let nudge = 0;
+        if (this.keys.left) nudge = -4; // User can still influence bowler direction
+        if (this.keys.right) nudge = 4;
+
+        this.ball.vx = (this.ball.x - 600) * 0.15 + nudge + (Math.random() - 0.5) * 5;
+        this.ball.vy = -power; 
+        this.ball.vz = loft;
+
+        this.fielders.forEach(f => f.state = 'CHASING');
+    },
+
+    update() {
+        // Fielders movement regardless of ball active state
+        this.fielders.forEach(f => {
+            if (f.state === 'RETURNING') {
+                f.x += (f.ox - f.x) * 0.08; f.y += (f.oy - f.y) * 0.08;
+                if(Math.hypot(f.x - f.ox, f.y - f.oy) < 2) f.state = 'WAITING';
+            }
+        });
+
+        if(!this.ball.active) return;
+        
+        this.ball.x += this.ball.vx; 
+        this.ball.y += this.ball.vy; 
+        this.ball.z += this.ball.vz;
+
+        if(this.ball.z > 0) {
+            this.ball.vz -= 0.28; 
+        } else { 
+            this.ball.z = 0; 
+            this.ball.vx *= this.ball.friction; 
+            this.ball.vy *= this.ball.friction; 
+        }
+
+        if (this.state === 'BOWLED') this.updateAIBatsman();
+
+        // Boundary Logic (Runs)
+        if (this.state === 'HIT' && (this.ball.y < 0 || this.ball.x < 0 || this.ball.x > this.width)) {
+            const r = this.ball.z > 10 ? 6 : 4;
+            this.triggerOutcome(r + " RUNS!", "var(--gold)", false, r);
+        }
+
+        // Stumps Check
+        if(this.state === 'BOWLED' && this.ball.y > 705) {
+            if(Math.abs(this.ball.x - 600) < 22 && this.ball.z < 40) {
+                this.triggerOutcome("BOWLED!", "#ff0055", true);
+            } else if(this.ball.y > 850) {
+                this.resetBall(); 
+            }
+        }
+        
+        this.fielders.forEach(f => {
+            if(f.state === 'CHASING') {
+                // Smart Fielder: Predicts ball path slightly (interpolates)
+                let targetX = this.ball.x + (this.ball.vx * 2);
+                let targetY = this.ball.y + (this.ball.vy * 2);
+                let dx = targetX - f.x;
+                let dy = targetY - f.y;
+                let angle = Math.atan2(dy, dx);
+                f.x += Math.cos(angle) * f.speed; f.y += Math.sin(angle) * f.speed;
+                
+                if(Math.hypot(this.ball.x - f.x, this.ball.y - f.y) < 25) {
+                    if(this.ball.z > 12 && this.ball.z < 65) this.triggerOutcome("CAUGHT!", "#ff0055", true);
+                    else {
+                        // Smarter fielding: concede fewer runs
+                        const speed = Math.hypot(this.ball.vx, this.ball.vy);
+                        const runs = speed > 6 ? 2 : (speed > 2 ? 1 : 0);
+                        this.triggerOutcome(runs + " RUNS", "#fff", false, runs);
+                    }
+                }
+            }
+        });
+    },
+
+    updateAIBatsman() {
+        if (this.aiBatsman.reactionTimer > 0) {
+            this.aiBatsman.reactionTimer--;
+            return;
+        }
+
+        if (this.aiBatsman.decision === 'WAITING') {
+            const isWide = Math.abs(this.ball.x - 600) > 65;
+            // Lower skill means batsman might swing at wide balls or miss good ones
+            this.aiBatsman.decision = (Math.random() < this.aiBatsman.skill && !isWide) ? 'SWINGING' : 'MISS';
+        }
+
+        if (this.aiBatsman.decision === 'SWINGING') {
+            const distY = Math.abs(this.ball.y - this.batsman.y);
+            // Smaller hit window for batsman
+            if (distY < 40 && !this.batsman.swinging) {
+                this.batsman.swinging = true;
+                this.hitBall(); 
+                setTimeout(() => { this.batsman.swinging = false; }, 350);
+            }
+        }
+    },
+
+    triggerOutcome(txt, col, out, runs = 0) {
+        this.state = 'OUTCOME'; 
+        this.ball.active = false;
+        if(out) this.wickets++;
+        this.runsConceded += runs;
+        
+        document.getElementById('ui-wickets').innerText = this.wickets;
+        document.getElementById('ui-runs').innerText = this.runsConceded;
+        
+        const fx = document.getElementById('fx-msg');
+        fx.innerText = txt; fx.style.color = col; fx.style.opacity = 1;
+        
+        this.fielders.forEach(f => f.state = 'RETURNING');
+
+        setTimeout(() => { 
+            fx.style.opacity = 0; 
+            this.resetBall(); 
+        }, 1600);
+    },
+
+    draw() {
+        const ctx = this.ctx; ctx.clearRect(0,0,this.width,this.height);
+        
+        // Pitch
+        ctx.fillStyle = '#4a3526'; ctx.fillRect(565, 150, 70, 560); 
+        
+        // Fielders
+        this.fielders.forEach(f => this.drawPlayer(f.x, f.y, '#ff0055'));
+        
+        // The Bowler (Player Character at top)
+        this.drawPlayer(this.bowler.x, this.bowler.y, '#00f2ff');
+
+        // Batsman (AI)
+        this.drawPlayer(600, 680, this.batsman.swinging ? '#fff' : '#00f2ff', true); 
+        
+        // Ball + Shadow
+        if(this.ball.active) {
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath(); ctx.arc(this.ball.x, this.ball.y, 5, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#ff0055';
+            ctx.beginPath(); ctx.arc(this.ball.x, this.ball.y - this.ball.z, 8, 0, Math.PI*2); ctx.fill();
+        }
+
+        // Bowling Marker
+        if(this.state === 'IDLE' && this.bowlingMarker.active) {
+            ctx.strokeStyle = '#00f2ff'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(this.bowlingMarker.x, this.bowlingMarker.y, 20, 0, Math.PI*2); ctx.stroke();
+        }
+    },
+
+    drawPlayer(x, y, col, isBat) {
+        this.ctx.fillStyle = col; this.ctx.fillRect(x-10, y-30, 20, 30);
+        this.ctx.fillStyle = '#ffdbac';
+        this.ctx.beginPath(); this.ctx.arc(x, y-35, 7, 0, Math.PI*2); this.ctx.fill();
+        if(isBat) {
+            this.ctx.save();
+            this.ctx.translate(x, y-15);
+            if(this.batsman.swinging) this.ctx.rotate(-Math.PI/2);
+            this.ctx.fillStyle = '#8b4513';
+            this.ctx.fillRect(8, -25, 6, 40);
+            this.ctx.restore();
+        }
+    },
+
+    loop() { this.update(); this.draw(); requestAnimationFrame(()=>this.loop()); }
+};
+</script>
+</body>
+</html>

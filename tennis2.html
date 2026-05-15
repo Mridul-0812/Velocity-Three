@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEON TENNIS PRO | RECEIVER MODE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-pink: #ff0055;
+            --court-green: #1a2e26;
+            --ball-yellow: #ccff00;
+            --glass: rgba(255, 255, 255, 0.1);
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            background: #050505;
+            color: #fff;
+            font-family: 'Rajdhani', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        .scoreboard {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--neon-pink);
+            padding: 15px 30px;
+            display: inline-block;
+            align-self: flex-start;
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .player-name { font-family: 'Orbitron'; font-size: 14px; letter-spacing: 2px; color: var(--neon-blue); }
+        .match-score { font-size: 24px; font-weight: 700; color: #fff; }
+        .current-points { font-family: 'Orbitron'; font-size: 32px; color: var(--ball-yellow); min-width: 60px; text-align: right; }
+
+        .announcer {
+            position: absolute;
+            top: 40%;
+            width: 100%;
+            text-align: center;
+            font-family: 'Orbitron';
+            font-size: 80px;
+            font-weight: 900;
+            text-transform: uppercase;
+            opacity: 0;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            pointer-events: none;
+            text-shadow: 0 0 30px var(--neon-blue);
+            z-index: 20;
+        }
+
+        .controls-hint {
+            background: var(--glass);
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 14px;
+            letter-spacing: 1px;
+            color: #ccc;
+            align-self: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        canvas {
+            background: var(--court-green);
+            box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
+            border: 4px solid #222;
+        }
+
+        #menu-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .btn {
+            background: transparent;
+            border: 2px solid var(--neon-pink);
+            color: var(--neon-pink);
+            padding: 15px 40px;
+            font-family: 'Orbitron';
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.3s;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: var(--neon-pink);
+            color: #fff;
+            box-shadow: 0 0 30px var(--neon-pink);
+        }
+
+        .btn.blue {
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+        }
+
+        .btn.blue:hover {
+            background: var(--neon-blue);
+            color: #000;
+            box-shadow: 0 0 30px var(--neon-blue);
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui-layer">
+    <div class="scoreboard">
+        <div class="score-row">
+            <span class="player-name">PLAYER (YOU)</span>
+            <span id="player-sets" class="match-score">SETS: 0 | GAMES: 0</span>
+            <span id="player-points" class="current-points">LOVE</span>
+        </div>
+        <div style="height: 1px; background: #333; margin: 10px 0;"></div>
+        <div class="score-row">
+            <span class="player-name" style="color: var(--neon-pink);">AI SERVER</span>
+            <span id="ai-sets" class="match-score">SETS: 0 | GAMES: 0</span>
+            <span id="ai-points" class="current-points">LOVE</span>
+        </div>
+    </div>
+
+    <div id="announcer" class="announcer">READY?</div>
+
+    <div class="controls-hint">
+        <b>RECEIVE MODE:</b> ARROWS to move | SPACE or X to Return
+    </div>
+</div>
+
+<div id="menu-overlay">
+    <h1 style="font-family:'Orbitron'; font-size: 50px; margin-bottom: 20px; color: var(--neon-pink);">PRO RECEIVER</h1>
+    <button class="btn" onclick="Game.start()">START RECEIVING</button>
+    <a href="tennis.html" class="btn blue">SWITCH TO SERVE MODE</a>
+</div>
+
+<canvas id="tennisCanvas"></canvas>
+
+<script>
+const Game = {
+    canvas: document.getElementById('tennisCanvas'),
+    ctx: null,
+    width: 1000,
+    height: 700,
+    isRunning: false,
+    
+    score: {
+        player: 0, ai: 0,
+        gamesP: 0, gamesA: 0,
+        setsP: 0, setsA: 0,
+        pointsMap: ["LOVE", "15", "30", "40", "AD"]
+    },
+
+    gravity: 0.15,
+    friction: 0.993,
+    
+    ball: {
+        x: 500, y: 100, z: 0,
+        vx: 0, vy: 0, vz: 0,
+        active: false,
+        lastHitBy: null,
+        bounced: false,
+        serveBouncedOnce: false, // NEW: Tracks the required serve bounce
+        isServe: false,
+        serveTimer: 60
+    },
+
+    player: { x: 500, y: 620, w: 60, h: 10, speed: 6.5, color: '#00f2ff' },
+    ai: { x: 500, y: 80, w: 60, h: 10, speed: 5.2, targetX: 500, state: 'IDLE' },
+    keys: {},
+
+    start() {
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        document.getElementById('menu-overlay').style.display = 'none';
+        this.isRunning = true;
+        this.initListeners();
+        this.resetPosition();
+        this.loop();
+    },
+
+    initListeners() {
+        window.addEventListener('keydown', (e) => this.keys[e.code] = true);
+        window.addEventListener('keyup', (e) => this.keys[e.code] = false);
+    },
+
+    resetPosition() {
+        this.ball.active = false;
+        this.ball.z = 0;
+        this.ball.x = this.ai.x;
+        this.ball.y = this.ai.y + 20;
+        this.ball.vx = 0; this.ball.vy = 0; this.ball.vz = 0;
+        this.ball.bounced = false;
+        this.ball.serveBouncedOnce = false;
+        this.ball.lastHitBy = null;
+        this.ball.isServe = false;
+        this.ball.serveTimer = 80; 
+        this.ai.state = 'IDLE';
+    },
+
+    aiServeLogic() {
+        if (!this.ball.active && this.ai.state === 'IDLE') {
+            this.ball.serveTimer--;
+            if (this.ball.serveTimer <= 0) {
+                this.ball.active = true;
+                this.ball.vz = 6.2;
+                this.ball.vy = 0.5;
+                this.ball.x = this.ai.x;
+                this.ai.state = 'TOSSING';
+            }
+        }
+
+        if (this.ai.state === 'TOSSING' && this.ball.vz < 0 && this.ball.z > 14) {
+            const targetY = 420 + Math.random() * 60; 
+            const targetX = 250 + Math.random() * 500; 
+            const distY = targetY - this.ball.y;
+            this.ball.vy = distY / 45; 
+            this.ball.vx = (targetX - this.ball.x) / 45;
+            this.ball.vz = 2.0; 
+            this.ball.lastHitBy = 'ai';
+            this.ball.isServe = true;
+            this.ai.state = 'RALLY';
+            this.announce("SERVICE", "#ff0055");
+        }
+    },
+
+    handleInput() {
+        if (this.keys['ArrowLeft'] && this.player.x > 150) this.player.x -= this.player.speed;
+        if (this.keys['ArrowRight'] && this.player.x < 850) this.player.x += this.player.speed;
+        if (this.keys['ArrowUp'] && this.player.y > 400) this.player.y -= this.player.speed;
+        if (this.keys['ArrowDown'] && this.player.y < 680) this.player.y += this.player.speed;
+
+        if (this.ball.active && this.ball.lastHitBy === 'ai') {
+            let dist = Math.hypot(this.ball.x - this.player.x, this.ball.y - this.player.y);
+            // Player can hit the ball after it has bounced once (or before if they are brave)
+            if (dist < 55 && this.ball.z >= 0 && this.ball.z < 60) {
+                if (this.keys['KeyX'] || this.keys['Space'] || this.keys['KeyZ']) {
+                    this.processPlayerReturn();
+                }
+            }
+        }
+    },
+
+    processPlayerReturn() {
+        const power = this.keys['KeyX'] ? 13 : 11;
+        const aimX = (this.keys['ArrowLeft'] ? -3.5 : (this.keys['ArrowRight'] ? 3.5 : 0));
+        this.ball.vy = -power;
+        this.ball.vx = aimX + (Math.random() - 0.5);
+        this.ball.vz = 4;
+        this.ball.lastHitBy = 'player';
+        this.ball.bounced = false;
+        this.ball.serveBouncedOnce = false; // Serve is successfully returned
+        this.ball.isServe = false;
+    },
+
+    updateAI() {
+        if (this.ball.active && this.ball.vy < 0) {
+            this.ai.targetX = this.ball.x;
+        } else {
+            this.ai.targetX = 500;
+        }
+
+        if (this.ai.x < this.ai.targetX - 5) this.ai.x += this.ai.speed;
+        if (this.ai.x > this.ai.targetX + 5) this.ai.x -= this.ai.speed;
+
+        let dist = Math.hypot(this.ball.x - this.ai.x, this.ball.y - this.ai.y);
+        if (this.ball.active && this.ball.lastHitBy === 'player' && dist < 45 && this.ball.z < 50) {
+            const targetY = 550 + Math.random() * 100;
+            const targetX = 200 + Math.random() * 600;
+            const distY = targetY - this.ball.y;
+            this.ball.vy = distY / 55;
+            this.ball.vx = (targetX - this.ball.x) / 55;
+            this.ball.vz = 4;
+            this.ball.lastHitBy = 'ai';
+            this.ball.bounced = false;
+        }
+    },
+
+    updatePhysics() {
+        if (!this.ball.active) return;
+
+        this.ball.x += this.ball.vx;
+        this.ball.y += this.ball.vy;
+        this.ball.z += this.ball.vz;
+
+        if (this.ball.z > 0) {
+            this.ball.vz -= this.gravity;
+        } else {
+            this.ball.z = 0;
+            if (Math.abs(this.ball.vz) > 0.5 || Math.abs(this.ball.vy) > 0.5) {
+                this.checkBounceOutcome();
+                this.ball.vz *= -0.55;
+                this.ball.bounced = true;
+            } else if (this.ai.state === 'TOSSING') {
+                this.resetPosition();
+            }
+        }
+
+        this.ball.vx *= this.friction;
+        this.ball.vy *= this.friction;
+
+        if (this.ball.y < -50 || this.ball.y > 750 || this.ball.x < 50 || this.ball.x > 950) {
+            this.handlePoint(this.ball.lastHitBy === 'player' ? 'ai' : 'player');
+        }
+    },
+
+    checkBounceOutcome() {
+        // Special logic for the Serve
+        if (this.ball.isServe && this.ball.lastHitBy === 'ai') {
+            if (!this.ball.serveBouncedOnce) {
+                // First bounce of the serve
+                const inBox = (this.ball.y > 350 && this.ball.y < 550 && this.ball.x > 150 && this.ball.x < 850);
+                if (!inBox) {
+                    this.handleFault();
+                } else {
+                    this.ball.serveBouncedOnce = true; // Safe bounce! Game continues.
+                }
+                return; 
+            }
+        }
+
+        // Standard point logic: if it bounces twice, the point ends
+        if (this.ball.bounced) {
+            this.handlePoint(this.ball.lastHitBy === 'player' ? 'player' : 'ai');
+        }
+    },
+
+    handleFault() {
+        this.announce("FAULT", "#ffcc00");
+        if (this.serveAttempt === 1) {
+            this.serveAttempt = 2;
+            this.resetPosition();
+        } else {
+            this.announce("DOUBLE FAULT", "#ff0055");
+            this.handlePoint('player');
+        }
+    },
+
+    handlePoint(winner) {
+        if (winner === 'player') this.score.player++;
+        else this.score.ai++;
+        this.serveAttempt = 1;
+        this.checkScoreState();
+        this.resetPosition();
+        this.announce(this.getScoreString(), winner === 'player' ? "#00f2ff" : "#ff0055");
+    },
+
+    getScoreString() {
+        const p = this.score.player; const a = this.score.ai;
+        if (p >= 3 && a >= 3) {
+            if (p === a) return "DEUCE";
+            return p > a ? "AD - PLAYER" : "AD - AI";
+        }
+        return `${this.score.pointsMap[p]} - ${this.score.pointsMap[a]}`;
+    },
+
+    checkScoreState() {
+        const p = this.score.player; const a = this.score.ai;
+        if (p >= 4 && p - a >= 2) { this.score.gamesP++; this.resetGame(); }
+        else if (a >= 4 && a - p >= 2) { this.score.gamesA++; this.resetGame(); }
+        this.updateScoreboard();
+    },
+
+    resetGame() {
+        this.score.player = 0; this.score.ai = 0;
+        if (this.score.gamesP >= 6) { this.score.setsP++; this.score.gamesP = 0; this.score.gamesA = 0; }
+        if (this.score.gamesA >= 6) { this.score.setsA++; this.score.gamesP = 0; this.score.gamesA = 0; }
+    },
+
+    updateScoreboard() {
+        const p = this.score.player; const a = this.score.ai;
+        document.getElementById('player-points').innerText = this.score.pointsMap[p] || (p > a ? "AD" : "40");
+        document.getElementById('ai-points').innerText = this.score.pointsMap[a] || (a > p ? "AD" : "40");
+        document.getElementById('player-sets').innerText = `SETS: ${this.score.setsP} | GAMES: ${this.score.gamesP}`;
+        document.getElementById('ai-sets').innerText = `SETS: ${this.score.setsA} | GAMES: ${this.score.gamesA}`;
+    },
+
+    announce(txt, col) {
+        const el = document.getElementById('announcer');
+        el.innerText = txt; el.style.color = col; el.style.opacity = 1;
+        setTimeout(() => { el.style.opacity = 0; }, 1200);
+    },
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0,0,this.width,this.height);
+        ctx.strokeStyle = "rgba(255,255,255,0.2)"; ctx.lineWidth = 3;
+        ctx.strokeRect(150, 50, 700, 600);
+        ctx.beginPath();
+        ctx.moveTo(150, 350); ctx.lineTo(850, 350); 
+        ctx.moveTo(150, 500); ctx.lineTo(850, 500);
+        ctx.stroke();
+        this.drawEntity(this.player.x, this.player.y, 60, 10, '#00f2ff', true);
+        this.drawEntity(this.ai.x, this.ai.y, 60, 10, '#ff0055', true);
+        if (this.ball.active) {
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath(); ctx.ellipse(this.ball.x, this.ball.y, 8, 4, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#ccff00'; ctx.shadowBlur = 10; ctx.shadowColor = '#ccff00';
+            ctx.beginPath(); ctx.arc(this.ball.x, this.ball.y - this.ball.z, 7, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+    },
+
+    drawEntity(x, y, w, h, col, glow) {
+        if (glow) { this.ctx.shadowBlur = 15; this.ctx.shadowColor = col; }
+        this.ctx.fillStyle = col; this.ctx.fillRect(x - w/2, y - h/2, w, h);
+        this.ctx.shadowBlur = 0;
+    },
+
+    loop() {
+        if (!this.isRunning) return;
+        this.aiServeLogic();
+        this.handleInput();
+        this.updatePhysics();
+        this.updateAI();
+        this.draw();
+        requestAnimationFrame(() => this.loop());
+    }
+};
+</script>
+</body>
+</html>
