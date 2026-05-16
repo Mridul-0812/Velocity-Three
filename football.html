@@ -215,6 +215,11 @@
             <h2>THE DRIBBLE RUN</h2>
             <p>Move left/right to evade defenders before striking.</p>
         </div>
+    
+        <div class="mode-option" onclick="Engine.initMode('CAMPAIGN')">
+            <h2>CHAMPIONS LEAGUE CAMPAIGN</h2>
+            <p>Advance through custom championship tournaments and tournaments brackets.</p>
+        </div>
     </div>
 
     <canvas id="mainCanvas"></canvas>
@@ -255,6 +260,16 @@
     keys: { space: false, left: false, right: false },
 
     initMode(selected) {
+        // Intercept execution path if tournament mode is selected
+        if (selected === 'CAMPAIGN') {
+            document.body.style.transition = "0.5s ease-in-out";
+            document.body.style.opacity = "0";
+            setTimeout(() => {
+                window.location.href = 'football2.html';
+            }, 400);
+            return; // Terminate execution early to prevent script crashes
+        }
+
         this.ctx = this.canvas.getContext('2d');
         this.canvas.width = this.width;
         this.canvas.height = this.height;

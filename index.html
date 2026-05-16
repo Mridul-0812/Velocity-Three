@@ -3,116 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ULTIMATE SPORTS TRILOGY | PRO EDITION</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Syncopate:wght@700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <title>VELOCITY THREE | NEXT-GEN SPORTS TRILOGY</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Montserrat:wght@300;400;700;900&family=Orbitron:wght@500;900&display=swap" rel="stylesheet">
     
     <style>
         :root {
             --neon-blue: #00f2ff;
-            --neon-gold: #ffcc00;
+            --neon-gold: #ffd700;
             --neon-red: #ff0055;
-            --bg-dark: #050505;
-            --glass: rgba(255, 255, 255, 0.05);
-            --border-glow: 0 0 15px rgba(0, 242, 255, 0.5);
+            --cyber-purple: #120024;
+            --deep-space: #030008;
+            --panel-mix: rgba(12, 5, 26, 0.45);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            outline: none; 
+        }
 
         body {
-            background-color: var(--bg-dark);
+            background: radial-gradient(circle at 50% 50%, var(--cyber-purple) 0%, var(--deep-space) 100%);
             color: #fff;
-            font-family: 'Rajdhani', sans-serif;
+            font-family: 'Montserrat', sans-serif;
             height: 100vh;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            perspective: 1000px;
+            perspective: 1200px;
         }
 
-        /* DYNAMIC BACKGROUND ANIMATION */
+        /* AMBIENT GLOW BACKDROP ENGINE */
         #bg-canvas {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            z-index: -1;
-            filter: blur(2px);
+            z-index: 1;
+            mix-blend-mode: screen;
         }
 
-        /* THE HUB CONTAINER */
+        .ambient-glow {
+            position: absolute;
+            width: 60vmax;
+            height: 60vmax;
+            background: radial-gradient(circle, rgba(0, 242, 255, 0.15) 0%, rgba(255, 0, 85, 0.05) 50%, transparent 100%);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            pointer-events: none;
+            filter: blur(40px);
+            transition: all 0.3s ease-out;
+        }
+
+        /* MASTER HUB CONTAINER */
         #hub-container {
             position: relative;
-            width: 90vw;
-            max-width: 1400px;
-            /* Changed from 80vh to auto or 100% to let it center naturally */
-            height: auto; 
+            width: 95vw;
+            max-width: 1500px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center; /* This ensures vertical centering */
+            justify-content: center;
             z-index: 10;
         }
 
         header {
             text-align: center;
-            margin-bottom: 50px;
-            animation: fadeInDown 1s ease-out;
+            margin-bottom: 60px;
+            position: relative;
+        }
+
+        /* BRAND TYPOGRAPHY DESIGN */
+        .brand-wrapper {
+            position: relative;
+            display: inline-block;
         }
 
         h1 {
-            font-family: 'Syncopate', sans-serif;
-            font-size: 3.5rem;
-            letter-spacing: 12px;
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 5.5rem;
+            font-weight: 900;
+            letter-spacing: 16px;
             text-transform: uppercase;
-            background: linear-gradient(to bottom, #fff 30%, var(--neon-blue));
-            background-clip: text;
+            margin-right: -16px; /* Offset final tracking balance */
+            background: linear-gradient(180deg, #ffffff 20%, #b2ebf2 50%, #00f2ff 80%, #005662 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 10px rgba(0, 242, 255, 0.3));
+            filter: drop-shadow(0 4px 15px rgba(0, 242, 255, 0.4)) drop-shadow(0 0 2px rgba(255,255,255,0.8));
+            position: relative;
+            z-index: 2;
+        }
+
+        .brand-reflection {
+            position: absolute;
+            top: 100%; left: 0; right: 0;
+            transform: scaleY(-0.4) translateY(45px);
+            opacity: 0.15;
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 5.5rem;
+            font-weight: 900;
+            letter-spacing: 16px;
+            text-transform: uppercase;
+            margin-right: -16px;
+            background: linear-gradient(180deg, #00f2ff, transparent);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            pointer-events: none;
+            filter: blur(2px);
         }
 
         .subtitle {
             font-family: 'Orbitron', sans-serif;
-            color: var(--neon-gold);
-            font-size: 1rem;
-            letter-spacing: 5px;
-            margin-top: 10px;
+            color: #ffffff;
+            font-size: 0.85rem;
+            letter-spacing: 9px;
+            margin-top: 15px;
+            text-transform: uppercase;
+            opacity: 0.8;
+            font-weight: 500;
         }
 
-        /* GAME SELECTION GRID */
+        .subtitle span {
+            color: var(--neon-gold);
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            font-weight: 900;
+        }
+
+        /* CARD ARCHITECTURE MATRIX */
         .game-grid {
             display: flex;
-            gap: 30px;
+            gap: 40px;
             width: 100%;
             justify-content: center;
             transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
         }
 
         .card {
             position: relative;
-            width: 350px;
-            height: 480px;
-            background: var(--glass);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 20px;
+            width: 380px;
+            height: 520px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 24px;
             overflow: hidden;
             cursor: pointer;
-            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-            backdrop-filter: blur(10px);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: flex-end;
-            padding: 40px 20px;
+            padding: 50px 30px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
         }
 
-        /* 3D TILT EFFECT */
-        .card:hover {
-            transform: translateY(-20px) rotateX(10deg);
-            border-color: var(--active-color);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 20px var(--active-color);
+        .card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            padding: 2px;
+            background: linear-gradient(to bottom right, rgba(255,255,255,0.2), transparent, var(--active-color));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            opacity: 0.5;
+            transition: opacity 0.4s;
         }
 
+        /* CORE SELECTION COLORS */
         .card.cricket { --active-color: var(--neon-gold); }
         .card.tennis { --active-color: var(--neon-blue); }
         .card.football { --active-color: var(--neon-red); }
@@ -121,201 +185,333 @@
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: -1;
-            opacity: 0.3;
-            transition: 0.5s;
+            opacity: 0.25;
+            filter: grayscale(40%) contrast(110%);
+            transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
             background-size: cover;
             background-position: center;
         }
 
-        .card:hover .card-bg { opacity: 0.7; transform: scale(1.1); }
+        .card-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(3,0,8,0.95) 20%, rgba(3,0,8,0.4) 60%, transparent 100%);
+            z-index: -1;
+        }
 
+        /* FOCUS ANIMATION ACTIONS */
+        .card:hover {
+            transform: translateY(-25px) scale(1.03) rotateX(7deg);
+            border-color: rgba(255,255,255,0.25);
+            box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 40px rgba(var(--glow-rgb), 0.3);
+        }
+
+        .card:hover::before { opacity: 1; }
+
+        .card.cricket { --glow-rgb: 255, 215, 0; }
+        .card.tennis { --glow-rgb: 0, 242, 255; }
+        .card.football { --glow-rgb: 255, 0, 85; }
+
+        .card:hover .card-bg { 
+            opacity: 0.65; 
+            transform: scale(1.12);
+            filter: grayscale(0%) contrast(100%);
+        }
+
+        /* TEXT AND UI OVERLAYS */
         .card h2 {
-            font-family: 'Syncopate', sans-serif;
-            font-size: 1.8rem;
-            margin-bottom: 15px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 2rem;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
             text-align: center;
+            background: linear-gradient(135deg, #ffffff 60%, var(--active-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            transition: transform 0.4s;
         }
 
         .card p {
-            font-size: 0.9rem;
-            color: #ccc;
+            font-size: 0.95rem;
+            color: #b0a8ba;
             text-align: center;
             line-height: 1.6;
-            margin-bottom: 25px;
+            margin-bottom: 30px;
+            font-weight: 400;
+            transition: color 0.4s;
+        }
+
+        .card:hover p {
+            color: #ffffff;
         }
 
         .play-btn {
-            padding: 12px 35px;
+            position: relative;
+            padding: 14px 40px;
             background: transparent;
             border: 2px solid var(--active-color);
             color: #fff;
             font-family: 'Orbitron', sans-serif;
-            font-weight: bold;
-            border-radius: 50px;
+            font-weight: 900;
+            font-size: 0.85rem;
+            border-radius: 12px;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            transition: 0.3s;
+            letter-spacing: 3px;
+            cursor: pointer;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .play-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 150%; height: 150%;
+            background: var(--active-color);
+            transform: translate(-50%, -50%) scale(0) rotate(45deg);
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: -1;
         }
 
         .card:hover .play-btn {
-            background: var(--active-color);
-            color: #000;
-            box-shadow: 0 0 20px var(--active-color);
+            color: #030008;
+            box-shadow: 0 0 25px var(--active-color);
+            transform: translateY(-2px);
         }
 
-        /* FOOTER STATS */
+        .card:hover .play-btn::before {
+            transform: translate(-50%, -50%) scale(1) rotate(45deg);
+        }
+
+        /* FOOTER STATS MODULE */
         .stats-bar {
             position: absolute;
-            bottom: 30px;
+            bottom: 0;
+            left: 0;
             width: 100%;
             display: flex;
             justify-content: space-around;
-            padding: 20px;
-            background: rgba(0,0,0,0.6);
-            border-top: 1px solid var(--neon-blue);
+            padding: 25px;
+            background: linear-gradient(to top, rgba(3, 0, 8, 0.9) 80%, transparent);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
             font-family: 'Orbitron', sans-serif;
+            z-index: 20;
         }
 
-        .stat-item { text-align: center; }
-        .stat-val { display: block; font-size: 1.5rem; color: var(--neon-blue); font-weight: 900; }
-        .stat-label { font-size: 0.7rem; color: #888; text-transform: uppercase; }
-
-        /* ANIMATIONS */
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-50px); }
-            to { opacity: 1; transform: translateY(0); }
+        .stat-item { 
+            text-align: center; 
+            transition: transform 0.3s;
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-5px);
         }
 
-        /* SCANLINE EFFECT */
+        .stat-val { 
+            display: block; 
+            font-size: 1.8rem; 
+            color: #fff; 
+            font-weight: 900; 
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(255,255,255,0.2);
+        }
+        
+        .stat-item.c-stat .stat-val { color: var(--neon-gold); }
+        .stat-item.t-stat .stat-val { color: var(--neon-blue); }
+        .stat-item.f-stat .stat-val { color: var(--neon-red); }
+
+        .stat-label { 
+            font-size: 0.75rem; 
+            color: #726682; 
+            text-transform: uppercase; 
+            letter-spacing: 3px;
+            margin-top: 4px;
+            font-weight: 700;
+        }
+
+        /* PREMIUM GLASS SCAN UTILITY */
         .scanlines {
             position: fixed;
             inset: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            background-size: 100% 4px, 3px 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%);
+            background-size: 100% 6px;
             pointer-events: none;
             z-index: 100;
+            opacity: 0.6;
         }
     </style>
 </head>
 <body>
 
     <div class="scanlines"></div>
+    <div class="ambient-glow" id="mouse-glow"></div>
     <canvas id="bg-canvas"></canvas>
 
     <div id="hub-container">
         <header>
-            <h1>SPORTS TRILOGY</h1>
-            <div class="subtitle">SELECT YOUR DISCIPLINE</div>
+            <div class="brand-wrapper">
+                <h1>Velocity Three</h1>
+                <div class="brand-reflection">Velocity Three</div>
+            </div>
+            <div class="subtitle">Select Your <span>Discipline</span></div>
         </header>
 
         <div class="game-grid">
             <div class="card cricket" onclick="launchGame('cricket')">
                 <div class="card-bg" style="background-image: url('https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80');"></div>
-                <h2>CRICKET<br>REVOLUTION</h2>
-                <p>Master the pitch. Precision timing, fielding AI, and stadium crowds await. Lead your team to glory.</p>
-                <button class="play-btn">Enter Match</button>
+                <div class="card-overlay"></div>
+                <h2>CRICKET</h2>
+                <p>Master the pitch. Experience absolute control with high-precision physics vectors and sub-degree timing matrices.</p>
+                <button class="play-btn">Enter Arena</button>
             </div>
 
             <div class="card tennis" onclick="launchGame('tennis')">
                 <div class="card-bg" style="background-image: url('https://images.pexels.com/photos/209977/pexels-photo-209977.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1');"></div>
-                <h2>TENNIS<br>ACE PRO</h2>
-                <p>High-speed rallies. Face off against the advanced AI. Experience professional singles physics.</p>
-                <button class="play-btn">Start Rally</button>
+                <div class="card-overlay"></div>
+                <h2>TENNIS</h2>
+                <p>High-velocity rallies. Deploy standard, slice, or flat drives against our multi-layered tactical AI simulation engines.</p>
+                <button class="play-btn">Launch Match</button>
             </div>
 
             <div class="card football" onclick="launchGame('football')">
                 <div class="card-bg" style="background-image: url('https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80');"></div>
-                <h2>UEFA<br>STRIKER</h2>
-                <p>Free kicks, Dribbling, and Penalty shootouts. The ultimate test of skill on the green turf.</p>
+                <div class="card-overlay"></div>
+                <h2>FOOTBALL</h2>
+                <p>Dominant technical ball strikes. Step up to execute bending free kicks and high-stakes penalty shootouts.</p>
                 <button class="play-btn">Kick Off</button>
             </div>
         </div>
-
     </div>
+
+    <footer class="stats-bar">
+        <div class="stat-item c-stat">
+            <span class="stat-val" id="total-runs">0</span>
+            <span class="stat-label">Total Runs Scored</span>
+        </div>
+        <div class="stat-item t-stat">
+            <span class="stat-val" id="tennis-rank">UNRANKED</span>
+            <span class="stat-label">World Tour Rank</span>
+        </div>
+        <div class="stat-item f-stat">
+            <span class="stat-val" id="goals-scored">0</span>
+            <span class="stat-label">Global Goals Claimed</span>
+        </div>
+    </footer>
 
     <script>
         /**
-         * HUB ENGINE & BACKGROUND PARTICLES
+         * MATRIC BACKGROUND VECTOR ENGINE
          */
         const canvas = document.getElementById('bg-canvas');
         const ctx = canvas.getContext('2d');
-        let particles = [];
+        let lines = [];
 
         function resize() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         }
 
-        class Particle {
+        class NeonLine {
             constructor() {
                 this.init();
             }
             init() {
                 this.x = Math.random() * canvas.width;
                 this.y = Math.random() * canvas.height;
-                this.size = Math.random() * 2 + 1;
-                this.speedX = (Math.random() - 0.5) * 1.5;
-                this.speedY = (Math.random() - 0.5) * 1.5;
-                this.color = `rgba(0, 242, 255, ${Math.random() * 0.5})`;
+                this.length = Math.random() * 120 + 40;
+                this.speed = Math.random() * 1.5 + 0.5;
+                this.alpha = Math.random() * 0.3 + 0.05;
+                // Alternate between blue and red accents
+                this.color = Math.random() > 0.5 ? `rgba(0, 242, 255, ${this.alpha})` : `rgba(255, 0, 85, ${this.alpha})`;
+                this.angle = -Math.PI / 4; // Constant elegant diagonal alignment
             }
             update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-                if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
-                if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                
+                // Wrap boundaries fluidly
+                if (this.x < -100 || this.y > canvas.height + 100) {
+                    this.init();
+                    this.y = -50;
+                    this.x = Math.random() * canvas.width;
+                }
             }
             draw() {
-                ctx.fillStyle = this.color;
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 1.5;
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + Math.cos(this.angle) * this.length, this.y + Math.sin(this.angle) * this.length);
+                ctx.stroke();
             }
         }
 
-        function initParticles() {
-            for (let i = 0; i < 100; i++) particles.push(new Particle());
+        function initBackgroundMatrix() {
+            lines = [];
+            for (let i = 0; i < 45; i++) lines.push(new NeonLine());
         }
 
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => {
-                p.update();
-                p.draw();
+            // Semi-transparent overlay clear creates sophisticated motion trails
+            ctx.fillStyle = 'rgba(3, 0, 8, 0.08)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            lines.forEach(line => {
+                line.update();
+                line.draw();
             });
             requestAnimationFrame(animate);
         }
 
-        // Logic for Launching Games
+        // Logic for Launching Games via Hyperlinks
         function launchGame(game) {
-            console.log(`Initializing ${game} engine...`);
-            document.body.style.transition = "1s";
-            document.body.style.transform = "scale(2) rotateY(20deg)";
+            console.log(`Loading standalone component: ${game}`);
+            document.body.style.transition = "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)";
+            document.body.style.transform = "scale(1.1) rotateX(15deg)";
             document.body.style.opacity = "0";
+            document.body.style.filter = "blur(10px)";
             
             setTimeout(() => {
                 window.location.href = game + ".html";
-            }, 800);
+            }, 750);
         }
 
-        // Local Storage Stat Loader (to make it feel persistent/commercial)
+        // Diagnostic LocalStorage Data Sync Hooks
         function loadStats() {
-            document.getElementById('total-runs').innerText = localStorage.getItem('cricket_score') || 0;
-            document.getElementById('goals-scored').innerText = localStorage.getItem('football_goals') || 0;
-            document.getElementById('tennis-rank').innerText = localStorage.getItem('tennis_rank') || 'UNRANKED';
+            const runs = localStorage.getItem('cricket_score') || 0;
+            const goals = localStorage.getItem('football_goals') || 0;
+            const rank = localStorage.getItem('tennis_rank') || 'UNRANKED';
+
+            document.getElementById('total-runs').innerText = Number(runs).toLocaleString();
+            document.getElementById('goals-scored').innerText = Number(goals).toLocaleString();
+            document.getElementById('tennis-rank').innerText = rank;
         }
 
-        window.addEventListener('resize', resize);
+        window.addEventListener('resize', () => {
+            resize();
+            initBackgroundMatrix();
+        });
+
+        // Initialize Core Engines
         resize();
-        initParticles();
+        initBackgroundMatrix();
         animate();
         loadStats();
 
-        // Mouse Tilt Effect for Hub
+        // 3D Isometric Mouse Interactivity Matrix Hooks
+        const mouseGlow = document.getElementById('mouse-glow');
+        const grid = document.querySelector('.game-grid');
+
         document.addEventListener('mousemove', (e) => {
-            let xAxis = (window.innerWidth / 2 - e.pageX) / 45;
-            let yAxis = (window.innerHeight / 2 - e.pageY) / 45;
-            document.querySelector('.game-grid').style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+            // Track pointer light illumination halo
+            mouseGlow.style.left = e.clientX + 'px';
+            mouseGlow.style.top = e.clientY + 'px';
+
+            // Calculate rotational offsets for 3D layout components
+            let xAxis = (window.innerWidth / 2 - e.clientX) / 70;
+            let yAxis = (window.innerHeight / 2 - e.clientY) / 50;
+            grid.style.transform = `rotateY(${-xAxis}deg) rotateX(${yAxis}deg)`;
         });
     </script>
 </body>

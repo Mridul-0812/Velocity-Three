@@ -32,7 +32,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 15px;
+            gap: 12px;
             width: 100%;
             max-width: 1100px;
             height: 100vh;
@@ -127,6 +127,86 @@
             font-weight: 700;
             letter-spacing: 1px;
             color: #e0e0e0;
+        }
+
+        /* Mode Switch Utility Toolbar Bar */
+        .mod-bar {
+            width: 1000px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            box-sizing: border-box;
+            padding-right: 5px;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(6, 12, 10, 0.6);
+            border: 1px solid rgba(0, 242, 255, 0.1);
+            padding: 6px 14px;
+            border-radius: 20px;
+        }
+
+        .toggle-label {
+            font-family: 'Orbitron';
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #728c83;
+            transition: color 0.2s ease;
+        }
+
+        .toggle-label.active {
+            color: var(--neon-blue);
+            text-shadow: 0 0 8px rgba(0, 242, 255, 0.4);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+        }
+
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #14241f;
+            transition: .3s;
+            border-radius: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #4e7368;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: rgba(0, 242, 255, 0.1);
+            border-color: var(--neon-blue);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+            background-color: var(--neon-blue);
+            box-shadow: 0 0 8px var(--neon-blue);
         }
 
         .viewport-wrapper {
@@ -264,7 +344,7 @@
     <div class="hud-header">
         <a href="tennis2.html" class="title-block">
             <h1>NEON TENNIS</h1>
-            <span>MODE: ADAPTIVE_AI &rarr; SWITCH TO TENNIS2</span>
+            <span id="engine-mode-status">MODE: ADAPTIVE_AI &rarr; SWITCH TO TENNIS2</span>
         </a>
 
         <div class="scoreboard-center">
@@ -285,6 +365,16 @@
         </a>
     </div>
 
+    <div class="mod-bar">
+        <div class="toggle-container">
+            <span id="toggle-text" class="toggle-label">ARTILLERY AIM ENGINE (OFF)</span>
+            <label class="switch">
+                <input type="checkbox" id="aimToggle" onchange="Game.toggleAimFeature(this.checked)">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+
     <div class="viewport-wrapper">
         <div id="announcer" class="announcer-text">READY</div>
         <canvas id="tennisCanvas"></canvas>
@@ -292,8 +382,9 @@
 
     <div class="controls-hint-footer">
         <div class="keys-config">
+            <div id="hint-mouse-action"><span>MOUSE:</span> Status Disabled</div>
             <div><span>ARROWS:</span> Move Paddle</div>
-            <div><span>SPACE:</span> Toss Ball / Hit Flat Strike</div>
+            <div><span>SPACE:</span> Flat Strike</div>
             <div><span>X KEY:</span> Topspin Drive</div>
             <div><span>Z KEY:</span> Curving Slice Arc</div>
         </div>
@@ -314,6 +405,9 @@ const Game = {
     rallyCount: 0, 
     isPowerShotActive: false,
     
+    // Toggle Switch Condition State Flags
+    aimFeatureEnabled: false,
+
     score: {
         player: 0, ai: 0, gamesP: 0, gamesA: 0, setsP: 0, setsA: 0,
         pointsMap: ["LOVE", "15", "30", "40", "AD"]
@@ -339,6 +433,8 @@ const Game = {
         maxTrail: 12
     },
 
+    aimTarget: { x: 500, y: 150 },
+
     player: { x: 500, y: 620, w: 90, h: 12, speed: 8.5, color: '#00f2ff' }, 
     ai: { x: 500, y: 80, w: 90, h: 12, speed: 6.5, targetX: 500, targetY: 80, state: 'NORMAL' },
 
@@ -361,6 +457,43 @@ const Game = {
     initListeners() {
         window.addEventListener('keydown', (e) => this.keys[e.code] = true);
         window.addEventListener('keyup', (e) => this.keys[e.code] = false);
+
+        this.canvas.addEventListener('mousemove', (e) => {
+            if (!this.aimFeatureEnabled) return;
+            const rect = this.canvas.getBoundingClientRect();
+            let mouseX = e.clientX - rect.left;
+            let mouseY = e.clientY - rect.top;
+
+            this.aimTarget.x = Math.max(200, Math.min(800, mouseX));
+            this.aimTarget.y = Math.max(60, Math.min(this.netY - 20, mouseY));
+        });
+    },
+
+    toggleAimFeature(isChecked) {
+        this.aimFeatureEnabled = isChecked;
+        const txtEl = document.getElementById('toggle-text');
+        const modeStatus = document.getElementById('engine-mode-status');
+        const hintMouse = document.getElementById('hint-mouse-action');
+
+        if (isChecked) {
+            txtEl.innerText = "ARTILLERY AIM ENGINE (ON)";
+            txtEl.classList.add('active');
+            modeStatus.innerHTML = "MODE: ARTILLERY_AIM &rarr; SWITCH TO TENNIS2";
+            hintMouse.innerHTML = "<span>MOUSE:</span> Aim Crosshair";
+            this.canvas.style.cursor = "crosshair";
+            // Boost AI Parameters into an unstable boss loop
+            this.ai.speed = 12.0; 
+            this.announce("AI REFLEX BOOSTED", "var(--neon-pink)");
+        } else {
+            txtEl.innerText = "ARTILLERY AIM ENGINE (OFF)";
+            txtEl.classList.remove('active');
+            modeStatus.innerHTML = "MODE: ADAPTIVE_AI &rarr; SWITCH TO TENNIS2";
+            hintMouse.innerHTML = "<span>MOUSE:</span> Status Disabled";
+            this.canvas.style.cursor = "default";
+            // Normalize standard gameplay values
+            this.ai.speed = 6.5;
+            this.announce("REVERTED TO NORMAL", "#fff");
+        }
     },
 
     resetPosition() {
@@ -441,116 +574,123 @@ const Game = {
             document.getElementById('rally-counter').innerText = `RALLY STREAK: ${this.rallyCount}`;
             this.isPowerShotActive = false;
 
-            let angleControl = (this.player.x - this.ball.x) * -0.06;
-            
-            if (strikeType === 'SERVE_FAST') {
-                this.ball.vy = -10.5; 
-                this.ball.vx = angleControl;
-                this.ball.vz = 3.5; 
-                this.ball.isServe = true;
-                this.announce("FAST SERVE", "var(--neon-blue)");
-            } else if (strikeType === 'SERVE_STANDARD') {
-                this.ball.vy = -8.5;
-                this.ball.vx = angleControl;
-                this.ball.vz = 4.8;
-                this.ball.isServe = true;
-                this.announce("STANDARD SERVE", "#fff");
-            } else if (strikeType === 'FAST_DRIVE') {
-                this.ball.vy = -11.0;
-                this.ball.vx = angleControl * 1.2;
-                this.ball.vz = 3.2;
-                this.ball.isServe = false;
-                this.announce("FAST DRIVE", "var(--neon-blue)");
-            } else if (strikeType === 'SLICE_ARC') {
-                this.ball.vy = -7.5;
-                this.ball.vx = angleControl + ((this.player.x < 500) ? 1.5 : -1.5);
-                this.ball.vz = 6.0; 
-                this.ball.spinX = (this.player.x < 500) ? 2.0 : -2.0; 
-                this.ball.isServe = false;
-                this.announce("SLICE ARC", "#ccff00");
-            } else { 
-                this.ball.vy = -9.0;
-                this.ball.vx = angleControl;
-                this.ball.vz = 4.2;
-                this.ball.isServe = false;
+            // Mode Splitting Logic Conditions
+            if (this.aimFeatureEnabled) {
+                let targetX = this.aimTarget.x;
+                let targetYDest = this.aimTarget.y;
+
+                if (strikeType === 'SERVE_FAST') {
+                    this.ball.vy = -12.0; this.ball.vz = 3.5; this.ball.isServe = true;
+                    this.announce("FAST SERVE", "var(--neon-blue)");
+                } else if (strikeType === 'SERVE_STANDARD') {
+                    this.ball.vy = -9.0; this.ball.vz = 4.8; this.ball.isServe = true;
+                    this.announce("STANDARD SERVE", "#fff");
+                } else if (strikeType === 'FAST_DRIVE') {
+                    this.ball.vy = -12.5; this.ball.vz = 3.0; this.ball.isServe = false;
+                    this.announce("FAST DRIVE", "var(--neon-blue)");
+                } else if (strikeType === 'SLICE_ARC') {
+                    this.ball.vy = -7.5; this.ball.vz = 6.2; this.ball.isServe = false;
+                    this.ball.spinX = (targetX < this.ball.x) ? -1.8 : 1.8; 
+                    this.announce("SLICE ARC", "#ccff00");
+                } else {
+                    this.ball.vy = -9.5; this.ball.vz = 4.2; this.ball.isServe = false;
+                }
+
+                let flightSteps = (targetYDest - this.ball.y) / this.ball.vy;
+                if (flightSteps <= 0) flightSteps = 30;
+                this.ball.vx = (targetX - this.ball.x) / flightSteps;
+            } else {
+                // Classic Base Mode Execution
+                let angleControl = (this.player.x - this.ball.x) * -0.06;
+                
+                if (strikeType === 'SERVE_FAST') {
+                    this.ball.vy = -10.5; this.ball.vx = angleControl; this.ball.vz = 3.5; this.ball.isServe = true;
+                    this.announce("FAST SERVE", "var(--neon-blue)");
+                } else if (strikeType === 'SERVE_STANDARD') {
+                    this.ball.vy = -8.5; this.ball.vx = angleControl; this.ball.vz = 4.8; this.ball.isServe = true;
+                    this.announce("STANDARD SERVE", "#fff");
+                } else if (strikeType === 'FAST_DRIVE') {
+                    this.ball.vy = -11.0; this.ball.vx = angleControl * 1.2; this.ball.vz = 3.2; this.ball.isServe = false;
+                    this.announce("FAST DRIVE", "var(--neon-blue)");
+                } else if (strikeType === 'SLICE_ARC') {
+                    this.ball.vy = -7.5; this.ball.vx = angleControl + ((this.player.x < 500) ? 1.5 : -1.5); this.ball.vz = 6.0; 
+                    this.ball.spinX = (this.player.x < 500) ? 2.0 : -2.0; this.ball.isServe = false;
+                    this.announce("SLICE ARC", "#ccff00");
+                } else { 
+                    this.ball.vy = -9.0; this.ball.vx = angleControl; this.ball.vz = 4.2; this.ball.isServe = false;
+                }
             }
         } else {
-            // AI RETURN SIMULATION LOGIC ENGINE WITH DYNAMIC PROBABILITIES
+            // AI RETURN SIMULATION LOGIC ENGINE
             this.ball.isServe = false;
             let rng = Math.random() * 100;
 
-            // 1) 5% WHIFF CHANCE CHECK (AI completely completely misses swing)
-            if (this.ai.state === 'WHIFF' || rng < 5) {
-                this.announce("AI MISSED HIT!", "var(--neon-blue)");
-                return; // Drops out instantly, letting ball fly out or double bounce
-            }
-
-            // 2) 10% ERROR IN ACCURACY CHANCE CHECK
-            if (rng >= 5 && rng < 15) {
-                let errRng = Math.random();
-                if (errRng < 0.5) {
-                    // Fail over net: Smashed way too low or flat
-                    this.ball.vy = 5.0;
-                    this.ball.vx = (this.player.x - this.ball.x) / 60;
-                    this.ball.vz = 0.5; 
-                    this.announce("AI ACCURACY FAULT", "var(--neon-pink)");
-                } else {
-                    // Over-hit: Deep skyball floating out of bounds
-                    this.ball.vy = 12.0;
-                    this.ball.vx = (Math.random() - 0.5) * 4;
-                    this.ball.vz = 9.0;
-                    this.announce("AI OVERHIT BALL", "var(--neon-pink)");
+            if (this.aimFeatureEnabled) {
+                // Dangerous God Mode Enabled: 95% Chance to cleanly process dynamic returns
+                if (rng < 5) {
+                    // Slight error chance margin 
+                    this.ball.vy = 4.5;
+                    this.ball.vx = (this.player.x - this.ball.x) / 50;
+                    this.ball.vz = 0.8;
+                    this.announce("AI REFLEX ACCURACY ERROR", "var(--neon-pink)");
+                    return;
                 }
-                return;
-            }
 
-            // 3) 10% PROBABILITY ELIGIBILITY FOR POWER SHOT DURING LONG RALLIES
-            if (this.rallyCount >= 4 && Math.random() < 0.10) {
-                this.isPowerShotActive = true;
-                this.announce("CRITICAL SMASH!", "var(--neon-pink)");
-                
-                // Fast target selection down the lines
-                let crossCourtTarget = (this.player.x > 500) ? 220 : 780;
-                this.ball.vy = 16.0; // Absolute max force tracking
-                this.ball.vx = (crossCourtTarget - this.ball.x) / 30;
-                this.ball.vz = 2.0;
-                return;
-            }
+                // AI Targeting execution loops down lines / corners
+                let targetX = (Math.random() < 0.5) ? (190 + Math.random() * 120) : (690 + Math.random() * 120);
+                let targetYDest = 500 + Math.random() * 155;
 
-            // 4) 85% STANDARD STABLE RETURN SYSTEM WITH MULTI-ZONE PLACEMENT STRATEGY
-            let zoneRng = Math.random();
-            let targetX, targetYDest;
-
-            if (zoneRng < 0.25) {
-                // Short Dropshot Zone (Right in front of net)
-                targetX = 250 + Math.random() * 500;
-                targetYDest = 390; // Barely past net
-                this.ball.vy = 6.2;
-                this.ball.vz = 5.5;
-            } else if (zoneRng < 0.55) {
-                // Deep Baseline Drive (Pushes player back to the edge)
-                targetX = 200 + Math.random() * 600;
-                targetYDest = 650;
-                this.ball.vy = 10.0;
+                this.ball.vy = 12.0; // Fast response drive values
                 this.ball.vz = 3.5;
-            } else if (zoneRng < 0.80) {
-                // Extreme Left Corner Drive
-                targetX = 180 + Math.random() * 80;
-                targetYDest = 500 + Math.random() * 140;
-                this.ball.vy = 8.5;
-                this.ball.vz = 4.2;
-            } else {
-                // Extreme Right Corner Drive
-                targetX = 740 + Math.random() * 80;
-                targetYDest = 500 + Math.random() * 140;
-                this.ball.vy = 8.5;
-                this.ball.vz = 4.2;
-            }
+                if (Math.random() < 0.2) { this.isPowerShotActive = true; this.ball.vy = 15.5; this.announce("IMPOSSIBLE RETURN!", "var(--neon-pink)"); }
 
-            // Automatically scale trajectories based on calculated locations
-            let flightSteps = (targetYDest - this.ball.y) / this.ball.vy;
-            if (flightSteps <= 0) flightSteps = 45; 
-            this.ball.vx = (targetX - this.ball.x) / flightSteps;
+                let flightSteps = (targetYDest - this.ball.y) / this.ball.vy;
+                if (flightSteps <= 0) flightSteps = 35; 
+                this.ball.vx = (targetX - this.ball.x) / flightSteps;
+            } else {
+                // Classic Base AI System Logic Flow
+                if (this.ai.state === 'WHIFF' || rng < 5) {
+                    this.announce("AI MISSED HIT!", "var(--neon-blue)");
+                    return; 
+                }
+
+                if (rng >= 5 && rng < 15) {
+                    let errRng = Math.random();
+                    if (errRng < 0.5) {
+                        this.ball.vy = 5.0; this.ball.vx = (this.player.x - this.ball.x) / 60; this.ball.vz = 0.5; 
+                        this.announce("AI ACCURACY FAULT", "var(--neon-pink)");
+                    } else {
+                        this.ball.vy = 12.0; this.ball.vx = (Math.random() - 0.5) * 4; this.ball.vz = 9.0;
+                        this.announce("AI OVERHIT BALL", "var(--neon-pink)");
+                    }
+                    return;
+                }
+
+                if (this.rallyCount >= 4 && Math.random() < 0.10) {
+                    this.isPowerShotActive = true;
+                    this.announce("CRITICAL SMASH!", "var(--neon-pink)");
+                    let crossCourtTarget = (this.player.x > 500) ? 220 : 780;
+                    this.ball.vy = 16.0; this.ball.vx = (crossCourtTarget - this.ball.x) / 30; this.ball.vz = 2.0;
+                    return;
+                }
+
+                let zoneRng = Math.random();
+                let targetX, targetYDest;
+
+                if (zoneRng < 0.25) {
+                    targetX = 250 + Math.random() * 500; targetYDest = 390; this.ball.vy = 6.2; this.ball.vz = 5.5;
+                } else if (zoneRng < 0.55) {
+                    targetX = 200 + Math.random() * 600; targetYDest = 650; this.ball.vy = 10.0; this.ball.vz = 3.5;
+                } else if (zoneRng < 0.80) {
+                    targetX = 180 + Math.random() * 80; targetYDest = 500 + Math.random() * 140; this.ball.vy = 8.5; this.ball.vz = 4.2;
+                } else {
+                    targetX = 740 + Math.random() * 80; targetYDest = 500 + Math.random() * 140; this.ball.vy = 8.5; this.ball.vz = 4.2;
+                }
+
+                let flightSteps = (targetYDest - this.ball.y) / this.ball.vy;
+                if (flightSteps <= 0) flightSteps = 45; 
+                this.ball.vx = (targetX - this.ball.x) / flightSteps;
+            }
         }
     },
 
@@ -570,12 +710,11 @@ const Game = {
         let yDiff = Math.abs(this.ball.y - this.ai.y);
         
         if (this.ball.active && this.ball.lastHitBy === 'player' && xDiff < 55 && yDiff < 25 && this.ball.z <= 60 && !this.ball.isTossed) {
-            // Determine behavior flag prior to hitting frame execution
-            if (this.ai.state === 'NORMAL') {
+            if (!this.aimFeatureEnabled && this.ai.state === 'NORMAL') {
                 let testRoll = Math.random() * 100;
                 if (testRoll < 5) {
                     this.ai.state = 'WHIFF';
-                    return; // Ignore contact entirely
+                    return; 
                 }
             }
             this.processHit('ai', null);
@@ -737,6 +876,11 @@ const Game = {
         this.drawCourtLines(ctx);
         this.drawNetMeshStructure(ctx);
 
+        // Render crosshair reticle overlay ONLY if feature is activated
+        if (this.aimFeatureEnabled && (this.ball.lastHitBy !== 'player' || this.ball.isTossed)) {
+            this.drawArtilleryReticle(ctx);
+        }
+
         this.drawPaddleNode(this.player.x, this.player.y, this.player.w, this.player.h, this.player.color, true);
         this.drawPaddleNode(this.ai.x, this.ai.y, this.ai.w, this.ai.h, 'var(--neon-pink)', true);
 
@@ -790,6 +934,34 @@ const Game = {
 
         ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(135, this.netY - this.netHeight); ctx.lineTo(865, this.netY - this.netHeight); ctx.stroke();
+    },
+
+    drawArtilleryReticle(ctx) {
+        let tx = this.aimTarget.x;
+        let ty = this.aimTarget.y;
+
+        ctx.strokeStyle = "rgba(0, 242, 255, 0.15)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(this.player.x, this.player.y);
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
+        ctx.setLineDash([]); 
+
+        ctx.strokeStyle = "var(--neon-blue)";
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "var(--neon-blue)";
+
+        ctx.beginPath();
+        ctx.arc(tx, ty, 10, 0, Math.PI * 2);
+        ctx.moveTo(tx - 18, ty); ctx.lineTo(tx - 6, ty);
+        ctx.moveTo(tx + 6, ty);  ctx.lineTo(tx + 18, ty);
+        ctx.moveTo(tx, ty - 18); ctx.lineTo(tx, ty - 6);
+        ctx.moveTo(tx, ty + 6);  ctx.lineTo(tx, ty + 18);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
     },
 
     drawPaddleNode(x, y, w, h, col, glow) {
