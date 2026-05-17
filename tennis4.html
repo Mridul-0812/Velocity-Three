@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HYPERION TENNIS PRO | MULTI-AGENT ENGINE VER 6.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-pink: #ff0055;
+            --neon-purple: #b300ff;
+            --court-green: #040d0a;
+            --ball-yellow: #ccff00;
+            --panel-border: rgba(0, 242, 255, 0.2);
+            --scanlines: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            background: #010304;
+            color: #fff;
+            font-family: 'Share Tech Mono', monospace;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .crt-layer::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: var(--scanlines);
+            background-size: 100% 4px, 6px 100%;
+            z-index: 2000;
+            pointer-events: none;
+            opacity: 0.45;
+        }
+
+        #workspace-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 1100px;
+            height: 100vh;
+        }
+
+        .shake-active {
+            animation: terminal-vibe 0.25s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes terminal-vibe {
+            10%, 90% { transform: translate3d(-2px, 0, 0); }
+            20%, 80% { transform: translate3d(4px, -2px, 0); }
+            30%, 50%, 70% { transform: translate3d(-5px, 4px, 0); }
+            40%, 60% { transform: translate3d(5px, -4px, 0); }
+        }
+
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 1000px;
+            height: 85px;
+            z-index: 5;
+        }
+
+        .title-block h1 {
+            font-family: 'Orbitron';
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            margin: 0;
+            background: linear-gradient(135deg, #fff, var(--neon-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+        }
+        .title-block span {
+            font-size: 10px;
+            color: #3b574e;
+            letter-spacing: 2px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .scoreboard-center {
+            background: rgba(3, 7, 6, 0.95);
+            border: 2px solid var(--panel-border);
+            border-top: 4px solid var(--neon-blue);
+            border-radius: 6px;
+            width: 440px;
+            padding: 6px 20px;
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.15);
+            backdrop-filter: blur(6px);
+        }
+
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 2px 0;
+        }
+
+        .score-player {
+            font-family: 'Orbitron';
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .score-digits {
+            font-family: 'Orbitron';
+            font-size: 20px;
+            font-weight: 900;
+            color: var(--ball-yellow);
+            text-shadow: 0 0 10px rgba(204, 255, 0, 0.4);
+        }
+
+        .fault-indicator {
+            font-family: 'Orbitron';
+            font-size: 11px;
+            color: var(--neon-pink);
+            text-align: center;
+            font-weight: 700;
+            min-height: 15px;
+            letter-spacing: 1px;
+        }
+
+        .match-stats-right {
+            background: rgba(3, 7, 6, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 10px 20px;
+            border-radius: 6px;
+            width: 260px;
+            text-align: right;
+        }
+        .stats-text {
+            font-family: 'Orbitron';
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #c4d4cf;
+        }
+
+        .viewport-wrapper {
+            position: relative;
+            width: 1000px;
+            height: 650px;
+        }
+
+        canvas {
+            background: var(--court-green);
+            border: 4px solid #0d1a16;
+            box-shadow: 0 0 45px rgba(0, 0, 0, 0.9);
+            display: block;
+            border-radius: 6px;
+        }
+
+        .announcer-text {
+            position: absolute;
+            top: 35%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron';
+            font-size: 52px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.1s ease-out;
+            text-shadow: 0 0 25px currentColor, 0 0 40px #000;
+            z-index: 90;
+            text-align: center;
+            width: 100%;
+        }
+
+        .controls-hint-footer {
+            width: 1000px;
+            background: rgba(3, 7, 6, 0.9);
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #5d786e;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            justify-content: space-between;
+            box-sizing: border-box;
+        }
+        .controls-hint-footer span {
+            color: var(--neon-blue);
+            font-weight: 700;
+        }
+
+        /* HARDWARE MENU OVERLAY SCREEN */
+        .overlay-screen {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, #06181b 0%, #010304 100%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+        }
+
+        .menu-title {
+            font-family: 'Orbitron';
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: 6px;
+            margin: 0;
+            background: linear-gradient(to right, #fff, var(--ball-yellow), var(--neon-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 20px rgba(0, 242, 255, 0.25));
+        }
+
+        .config-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .config-label {
+            font-family: 'Orbitron';
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: #4a6f7d;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .radio-group label {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 8px 16px;
+            font-family: 'Orbitron';
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            color: #92a7bf;
+        }
+
+        .radio-group input {
+            display: none;
+        }
+
+        .radio-group input:checked + label {
+            background: rgba(0, 242, 255, 0.08);
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.25);
+        }
+
+        /* CALIBRATION MATRIX GRID */
+        .controls-matrix-grid {
+            display: flex;
+            gap: 30px;
+            width: 850px;
+            margin: 15px 0;
+        }
+
+        .control-card {
+            flex: 1;
+            background: rgba(3, 12, 14, 0.85);
+            border: 1px solid rgba(0, 242, 255, 0.15);
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.5);
+        }
+
+        .control-card h3 {
+            font-family: 'Orbitron';
+            margin-top: 0;
+            font-size: 16px;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(0, 242, 255, 0.2);
+            padding-bottom: 8px;
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+
+        .key-capsule {
+            background: #112529;
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .btn {
+            background: transparent;
+            border: 2px solid var(--ball-yellow);
+            color: var(--ball-yellow);
+            padding: 12px 30px;
+            font-family: 'Orbitron';
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 2px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-top: 10px;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .btn:hover {
+            background: var(--ball-yellow);
+            color: #000;
+            box-shadow: 0 0 25px rgba(204, 255, 0, 0.4);
+        }
+    </style>
+</head>
+<body class="crt-layer">
+
+<div id="menu-overlay" class="overlay-screen">
+    <h1 class="menu-title">HYPERION ENG-6</h1>
+    <div style="font-size: 11px; letter-spacing: 5px; color: #435e55; text-transform: uppercase; margin-bottom: 5px;">Advanced Analytics Multi-Agent Core</div>
+    
+    <div class="config-section">
+        <span class="config-label">Tactical Game Mode Matrix</span>
+        <div class="radio-group">
+            <input type="radio" id="mode-singles" name="gameMode" value="SINGLES" checked>
+            <label for="mode-singles">SINGLES PROFILE (1v1)</label>
+            <input type="radio" id="mode-doubles" name="gameMode" value="DOUBLES">
+            <label for="mode-doubles">CO-OP DOUBLES (2v2 AI)</label>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <span class="config-label">AI Difficulty Rating</span>
+        <div class="radio-group">
+            <input type="radio" id="diff-easy" name="difficulty" value="EASY">
+            <label for="diff-easy">EASY ENGINE</label>
+            <input type="radio" id="diff-medium" name="difficulty" value="MEDIUM" checked>
+            <label for="diff-medium">PRO BALANCED</label>
+            <input type="radio" id="diff-hard" name="difficulty" value="HARD">
+            <label for="diff-hard">ELITE WALL</label>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <span class="config-label">Set Length Matrix</span>
+        <div class="radio-group">
+            <input type="radio" id="set-1g" name="setLength" value="1G">
+            <label for="set-1g">1-GAME COIN TOSS</label>
+            <input type="radio" id="set-2g" name="setLength" value="2G">
+            <label for="set-2g">2-GAME MINI SET</label>
+            <input type="radio" id="set-6g" name="setLength" value="6G" checked>
+            <label for="set-6g">6/7 GAME STANDARD</label>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <span class="config-label">Deuce System Protocol</span>
+        <div class="radio-group">
+            <input type="radio" id="deuce-long" name="deuceMode" value="ADVANTAGE" checked>
+            <label for="deuce-long">ADVANTAGE DEUCE</label>
+            <input type="radio" id="deuce-short" name="deuceMode" value="SUDDEN_DEATH">
+            <label for="deuce-short">SUDDEN DEATH</label>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <span class="config-label">Match Duration Length</span>
+        <div class="radio-group">
+            <input type="radio" id="len-1" name="matchLength" value="1" checked>
+            <label for="len-1">1 SET MATCH</label>
+            <input type="radio" id="len-3" name="matchLength" value="3">
+            <label for="len-3">3 SETS FULL</label>
+            <input type="radio" id="len-5" name="matchLength" value="5">
+            <label for="len-5">5 SETS FULL-MEN'S</label>
+        </div>
+    </div>
+
+    <div style="width: 380px; margin-top: 5px;">
+        <button class="btn" onclick="Game.processInitialSelection()">ANALYZE SYSTEM HARDWARE</button>
+    </div>
+</div>
+
+<div id="controls-overlay" class="overlay-screen" style="display: none;">
+    <h2 class="menu-title" style="font-size: 32px;">CALIBRATING INPUT BUS</h2>
+    <div style="font-size: 11px; letter-spacing: 3px; color: #4a6f7d; text-transform: uppercase;">Verify Human Key Registries Before Injection</div>
+
+    <div class="controls-matrix-grid">
+        <div class="control-card" style="border-color: var(--neon-blue);">
+            <h3 style="color: var(--neon-blue);">HUMAN OPERATOR 1 (P1)</h3>
+            <div class="control-row"><span>Movement Vectors:</span><span class="key-capsule">W / A / S / D</span></div>
+            <div class="control-row"><span>Flat Shot / Serve Strike:</span><span class="key-capsule">SPACEBAR</span></div>
+            <div class="control-row"><span>Topspin Acceleration:</span><span class="key-capsule">E KEY</span></div>
+            <div class="control-row"><span>Magnus Slice Vector:</span><span class="key-capsule">Q KEY</span></div>
+            <div class="control-row"><span>Drop Short Cushion:</span><span class="key-capsule">R KEY</span></div>
+            <div class="control-row"><span>High Velocity Smash:</span><span class="key-capsule">F KEY</span></div>
+        </div>
+
+        <div id="p2-control-card" class="control-card" style="border-color: var(--neon-purple);">
+            <h3 style="color: var(--neon-purple);">HUMAN OPERATOR 2 (P2)</h3>
+            <div class="control-row"><span>Movement Vectors:</span><span class="key-capsule">ARROW KEYS</span></div>
+            <div class="control-row"><span>Flat Shot / Serve Strike:</span><span class="key-capsule">SPACEBAR</span></div>
+            <div class="control-row"><span>Topspin Acceleration:</span><span class="key-capsule">M KEY</span></div>
+            <div class="control-row"><span>Magnus Slice Vector:</span><span class="key-capsule">K KEY</span></div>
+            <div class="control-row"><span>Drop Short Cushion:</span><span class="key-capsule">L KEY</span></div>
+            <div class="control-row"><span>High Velocity Smash:</span><span class="key-capsule">I KEY</span></div>
+        </div>
+    </div>
+
+    <div style="width: 380px;">
+        <button class="btn" onclick="Game.bootValidatedMatchEngine()">START SYSTEM GAME</button>
+    </div>
+</div>
+
+<div id="coin-container" class="overlay-screen" style="display: none;">
+    <div style="font-size: 14px; letter-spacing: 4px; color: #4a6f7d; margin-bottom: 25px;">EXECUTING RANDOM SELECTION PROTOCOL</div>
+    <canvas id="coinCanvas" width="300" height="300"></canvas>
+    <div id="coin-winner-announcement" style="font-size: 24px; font-weight: 900; color: #ccff00; margin-top: 25px; height: 30px; letter-spacing: 2px;"></div>
+</div>
+
+<div id="stats-overlay" class="overlay-screen" style="display: none;">
+    <div class="stats-card" style="background:#020705; border:2px solid rgba(0,242,255,0.25); padding:35px; width:550px; border-radius:8px;">
+        <div class="stats-header" id="modal-title" style="text-align:center; font-size:26px; font-weight:900; color:var(--ball-yellow); margin-bottom:25px;">SET CONCLUDED</div>
+        <div class="stats-row" style="display:flex; justify-content:between; margin:14px 0; font-size:13px; color:#4a6f7d; font-weight:700;">
+            <span>TELEMETRY METRICS</span>
+            <span>PLAYER TEAM</span>
+            <span>AI CORE TEAM</span>
+        </div>
+        <hr style="border:0; border-top:1px dashed rgba(0, 242, 255, 0.2)">
+        <div class="stats-row" style="display:flex; justify-content:space-between; margin:14px 0; font-size:13px;">
+            <span>GAMES CONCLUDED:</span>
+            <span id="stat-games-p" style="color:var(--neon-blue); font-weight:900;">0</span>
+            <span id="stat-games-a" style="color:var(--neon-pink); font-weight:900;">0</span>
+        </div>
+        <div class="stats-row" style="display:flex; justify-content:space-between; margin:14px 0; font-size:13px;">
+            <span>TOTAL POINTS RECORDED:</span>
+            <span id="stat-pts-p" style="color:#fff;">0</span>
+            <span id="stat-pts-a" style="color:#fff;">0</span>
+        </div>
+        <div class="stats-row" style="display:flex; justify-content:space-between; margin:14px 0; font-size:13px; border-top:1px solid rgba(0,242,255,0.15); padding-top:12px; margin-top:15px;">
+            <span>TOURNAMENT STANDINGS SCOREBOARD:</span>
+            <span id="stat-match-sets" style="color:var(--ball-yellow); font-weight:900;">0 - 0 Sets</span>
+        </div>
+        <button class="btn" id="modal-continue-btn" onclick="Game.dismissStatsModal()">DISPATCH NEXT SYSTEM SET</button>
+    </div>
+</div>
+
+<div id="workspace-container">
+    <div class="hud-header">
+        <div class="title-block">
+            <h1>HYPERION CORE</h1>
+            <span id="engine-mode-status">SYSTEM LOADED</span>
+        </div>
+
+        <div class="scoreboard-center" id="hud-scorebox">
+            <div class="score-row">
+                <span class="score-player" id="hud-team1-label" style="color: var(--neon-blue);">PLAYER TEAM</span>
+                <span id="player-points" class="score-digits">LOVE</span>
+            </div>
+            <div class="score-row" style="border-top: 1px solid rgba(0,242,255,0.08); padding-top: 4px; margin-top: 4px;">
+                <span class="score-player" style="color: var(--neon-pink);">AI OPPONENTS</span>
+                <span id="ai-points" class="score-digits">LOVE</span>
+            </div>
+            <div id="fault-banner" class="fault-indicator"></div>
+        </div>
+
+        <div class="match-stats-right">
+            <div id="sets-summary" class="stats-text">SETS: 0 - 0 | GAMES: 0 - 0</div>
+            <div id="rally-counter" style="font-size: 11px; color: #ccff00; margin-top: 2px; font-weight: 700;">RALLY STREAK: 0</div>
+        </div>
+    </div>
+
+    <div class="viewport-wrapper" id="shake-node">
+        <div id="announcer" class="announcer-text">READY</div>
+        <canvas id="tennisCanvas"></canvas>
+    </div>
+
+    <div class="controls-hint-footer">
+        <div id="footer-controls-text">P1: WASD [Space/E/Q/R/F] | P2: ARROWS [Space/M/K/L/I]</div>
+        <div id="anti-spam-status" style="color: #ff0055; font-weight: 700; letter-spacing: 1px;">SPAM DETECTION: NOMINAL</div>
+    </div>
+</div>
+
+<script>
+const Game = {
+    canvas: document.getElementById('tennisCanvas'),
+    ctx: null,
+    width: 1000,
+    height: 650,
+    isRunning: false,
+    pointAwarded: false,
+    rallyCount: 0,
+    isPowerShotActive: false,
+    serveTimer: null,
+    serveDebounce: false,
+
+    // Match Architectures 
+    gameMode: "SINGLES", 
+    difficulty: "MEDIUM",
+    setLength: "6G", 
+    deuceMode: "ADVANTAGE",
+    maxSetsToWin: 1,
+    currentServer: 'player1', 
+    isTiebreak: false,
+
+    // Anti-Spam Tracking Registries
+    playerPowerStreak: 0,
+    aiEnforcedSmashQueued: false,
+
+    memoryHistory: {
+        setScores: [],
+        currentSet: { playerPointsWon: 0, aiPointsWon: 0 }
+    },
+
+    score: {
+        player: 0, ai: 0,
+        gamesP: 0, gamesA: 0,
+        setsP: 0, setsA: 0,
+        pointsMap: ["LOVE", "15", "30", "40", "AD"]
+    },
+
+    serveAttempt: 1,
+    gravity: 0.22,
+    friction: 0.995,
+    netY: 325,
+    netHeight: 22,
+
+    // Dynamic Play Bounds
+    courtBounds: { left: 200, right: 800 },
+
+    ball: {
+        x: 500, y: 550, z: 0,
+        vx: 0, vy: 0, vz: 0,
+        radius: 7, active: false,
+        lastHitBy: null, bounceState: 'AIRBORNE',
+        isServe: false, isTossed: false, spinX: 0,
+        trail: [], maxTrail: 16
+    },
+
+    // Cooperative Entity Grid System
+    player1: { x: 450, y: 580, w: 80, h: 12, speed: 8.5, color: '#00f2ff' },
+    player2: { x: 550, y: 580, w: 80, h: 12, speed: 8.5, color: '#b300ff', active: false },
+    
+    ai1: { x: 450, y: 70, w: 80, h: 12, speed: 6.0, targetX: 450, vx: 0, decisionTimer: 0, reactionInterval: 10 },
+    ai2: { x: 550, y: 70, w: 80, h: 12, speed: 6.0, targetX: 550, vx: 0, decisionTimer: 0, reactionInterval: 10, active: false },
+
+    keys: {},
+
+    processInitialSelection() {
+        this.gameMode = document.querySelector('input[name="gameMode"]:checked').value;
+        this.difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+        this.setLength = document.querySelector('input[name="setLength"]:checked').value;
+        this.deuceMode = document.querySelector('input[name="deuceMode"]:checked').value;
+        const lengthVal = parseInt(document.querySelector('input[name="matchLength"]:checked').value);
+
+        this.maxSetsToWin = lengthVal === 1 ? 1 : (lengthVal === 3 ? 2 : 3);
+
+        // Adjust boundaries dynamically based on Singles vs Doubles rules
+        if (this.gameMode === "DOUBLES") {
+            this.courtBounds.left = 150;
+            this.courtBounds.right = 850;
+            this.player2.active = true;
+            this.ai2.active = true;
+            document.getElementById('p2-control-card').style.opacity = "1";
+            document.getElementById('hud-team1-label').innerText = "PLAYER TEAM (CO-OP)";
+            document.getElementById('footer-controls-text').innerHTML = "<span>P1(WASD):</span> Space/E/Q/R/F | <span>P2(Arrows):</span> Space/M/K/L/I";
+        } else {
+            this.courtBounds.left = 200;
+            this.courtBounds.right = 800;
+            this.player2.active = false;
+            this.ai2.active = false;
+            document.getElementById('p2-control-card').style.opacity = "0.2";
+            document.getElementById('hud-team1-label').innerText = "PLAYER (YOU)";
+            document.getElementById('footer-controls-text').innerHTML = "<span>CONTROLS:</span> Use Arrow Keys + Spacebar (Or WASD configuration)";
+        }
+
+        // Trigger Configuration Calibration Screen Frame Overlay
+        document.getElementById('menu-overlay').style.display = 'none';
+        document.getElementById('controls-overlay').style.display = 'flex';
+    },
+
+    bootValidatedMatchEngine() {
+        document.getElementById('controls-overlay').style.display = 'none';
+
+        if (this.setLength === "1G") {
+            this.executeCoinTossSequence();
+        } else {
+            this.initialiseMainGameInterface();
+        }
+    },
+
+    executeCoinTossSequence() {
+        const container = document.getElementById('coin-container');
+        container.style.display = 'flex';
+
+        const cCanvas = document.getElementById('coinCanvas');
+        const cCtx = cCanvas.getContext('2d');
+        
+        let angle = 0;
+        let speed = 0.4;
+        let frames = 0;
+        const maxFrames = 90;
+        
+        const roll = Math.random();
+        const winnerText = roll > 0.5 ? "HUMAN TEAM" : "AI TEAM";
+
+        function animateCoin() {
+            cCtx.clearRect(0, 0, 300, 300);
+            cCtx.save();
+            cCtx.translate(150, 150);
+            
+            let scaleX = Math.abs(Math.cos(angle));
+            cCtx.scale(scaleX, 1);
+
+            cCtx.strokeStyle = '#00f2ff';
+            cCtx.lineWidth = 6;
+            cCtx.fillStyle = '#051417';
+            cCtx.beginPath();
+            cCtx.arc(0, 0, 90, 0, Math.PI * 2);
+            cCtx.fill();
+            cCtx.stroke();
+
+            cCtx.strokeStyle = '#ccff00';
+            cCtx.lineWidth = 2;
+            cCtx.beginPath();
+            cCtx.arc(0, 0, 75, 0, Math.PI * 2);
+            cCtx.stroke();
+
+            cCtx.fillStyle = '#fff';
+            cCtx.font = 'bold 20px Orbitron';
+            cCtx.textAlign = 'center';
+            cCtx.textBaseline = 'middle';
+            
+            let normalAngle = (angle % (Math.PI * 2));
+            if (normalAngle > Math.PI / 2 && normalAngle < (3 * Math.PI) / 2) {
+                cCtx.fillText('AI TEAM', 0, 0);
+            } else {
+                cCtx.fillText('HUMAN', 0, 0);
+            }
+
+            cCtx.restore();
+            
+            angle += speed;
+            speed *= 0.985; 
+            frames++;
+
+            if (frames < maxFrames || speed > 0.02) {
+                requestAnimationFrame(animateCoin);
+            } else {
+                cCtx.clearRect(0, 0, 300, 300);
+                cCtx.save();
+                cCtx.translate(150, 150);
+                cCtx.strokeStyle = winnerText === "HUMAN TEAM" ? '#00f2ff' : '#ff0055';
+                cCtx.lineWidth = 8;
+                cCtx.fillStyle = '#051417';
+                cCtx.beginPath(); cCtx.arc(0, 0, 90, 0, Math.PI * 2); cCtx.fill(); cCtx.stroke();
+                cCtx.fillStyle = '#fff';
+                cCtx.font = 'bold 22px Orbitron';
+                cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
+                cCtx.fillText(winnerText, 0, 0);
+                cCtx.restore();
+
+                document.getElementById('coin-winner-announcement').innerText = `${winnerText} SERVICE PRIVILEGE`;
+                
+                setTimeout(() => {
+                    container.style.display = 'none';
+                    Game.currentServer = winnerText === "HUMAN TEAM" ? 'player1' : 'ai1';
+                    Game.initialiseMainGameInterface();
+                }, 2200);
+            }
+        }
+        animateCoin();
+    },
+
+    initialiseMainGameInterface() {
+        const deuceDisplay = this.deuceMode === "ADVANTAGE" ? "ADVANTAGE DEUCE" : "SUDDEN DEATH";
+        let lengthDisplay = "6-GAME STANDARD SET";
+        if (this.setLength === "1G") lengthDisplay = "1-GAME MATRIX DECIDER";
+        if (this.setLength === "2G") lengthDisplay = "2-GAME MINI SET";
+
+        document.getElementById('engine-mode-status').innerText = `${this.gameMode} | ${this.difficulty} | ${deuceDisplay} | ${lengthDisplay}`;
+        this.start();
+    },
+
+    start() {
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.isRunning = true;
+        
+        this.initListeners();
+        this.resetPosition();
+        this.loop();
+    },
+
+    initListeners() {
+        window.addEventListener('keydown', (e) => this.keys[e.code] = true);
+        window.addEventListener('keyup', (e) => this.keys[e.code] = false);
+    },
+
+    resetPosition() {
+        if (this.serveTimer) clearTimeout(this.serveTimer);
+
+        this.ball.active = false;
+        this.ball.z = 0; this.ball.vx = 0; this.ball.vy = 0; this.ball.vz = 0;
+        this.ball.spinX = 0;
+        this.ball.bounceState = 'AIRBORNE';
+        this.ball.lastHitBy = null;
+        this.ball.isServe = false; this.ball.isTossed = false;
+        this.ball.trail = [];
+        this.pointAwarded = false;
+        this.rallyCount = 0;
+        this.serveDebounce = false;
+        this.isPowerShotActive = false;
+        document.getElementById('rally-counter').innerText = `RALLY STREAK: 0`;
+
+        const scoreBox = document.getElementById('hud-scorebox');
+        
+        // Setup initial physical baseline orientation geometry positions
+        if (this.gameMode === "DOUBLES") {
+            this.player1.x = 350; this.player1.y = 560;
+            this.player2.x = 650; this.player2.y = 580;
+            this.ai1.x = 350; this.ai1.y = 90; this.ai1.targetX = 350;
+            this.ai2.x = 650; this.ai2.y = 70; this.ai2.targetX = 650;
+        } else {
+            this.player1.x = 500; this.player1.y = 580;
+            this.ai1.x = 500; this.ai1.y = 70; this.ai1.targetX = 500;
+        }
+
+        if (this.currentServer.startsWith('player')) {
+            scoreBox.style.borderTopColor = 'var(--neon-blue)';
+            let serverUnit = (this.currentServer === 'player2' && this.player2.active) ? this.player2 : this.player1;
+            
+            // Align service starting corner parameters alternation
+            serverUnit.x = (this.score.player + this.score.ai) % 2 === 0 ? 350 : 650;
+            this.ball.x = serverUnit.x; this.ball.y = serverUnit.y - 25;
+            this.announce(this.gameMode === "DOUBLES" ? "HUMAN TEAM SERVICE" : "YOUR SERVICE", "var(--neon-blue)");
+        } else {
+            scoreBox.style.borderTopColor = 'var(--neon-pink)';
+            let serverUnit = (this.currentServer === 'ai2' && this.ai2.active) ? this.ai2 : this.ai1;
+            
+            serverUnit.x = (this.score.player + this.score.ai) % 2 === 0 ? 350 : 650;
+            serverUnit.targetX = serverUnit.x;
+            this.ball.x = serverUnit.x; this.ball.y = serverUnit.y + 25;
+            this.announce("AI ENGINE SERVICE", "var(--neon-pink)");
+            
+            this.serveTimer = setTimeout(() => this.executeAiTeamServeRoutine(), 1200);
+        }
+    },
+
+    executeAiTeamServeRoutine() {
+        if (!this.isRunning || this.pointAwarded) return;
+
+        let serverUnit = (this.currentServer === 'ai2' && this.ai2.active) ? this.ai2 : this.ai1;
+
+        this.ball.active = true;
+        this.ball.x = serverUnit.x; this.ball.y = serverUnit.y + 25;
+        this.ball.z = 5; this.ball.vz = 8.0;
+        this.ball.isServe = true; this.ball.isTossed = true;
+        this.ball.lastHitBy = this.currentServer;
+
+        let accuracyRoll = Math.random();
+        let isFault = false;
+        if (this.difficulty === "EASY" && accuracyRoll > 0.50) isFault = true;
+        if (this.difficulty === "MEDIUM" && accuracyRoll > 0.80) isFault = true;
+        if (this.difficulty === "HARD" && accuracyRoll > 0.94) isFault = true;
+
+        setTimeout(() => {
+            if (this.ball.active && this.ball.isTossed && this.ball.lastHitBy.startsWith('ai')) {
+                this.processStrikingImpactIntersection(this.currentServer, isFault ? 'AI_FAULT_SERVE' : 'AI_GOOD_SERVE');
+            }
+        }, 550);
+    },
+
+    handleInput() {
+        // --- HUMAN OPERATOR 1 MATRIX BUS (WASD Layout) ---
+        if (this.keys['KeyA'] && this.player1.x > this.courtBounds.left) this.player1.x -= this.player1.speed;
+        if (this.keys['KeyD'] && this.player1.x < this.courtBounds.right) this.player1.x += this.player1.speed;
+        if (this.keys['KeyW'] && this.player1.y > 380) this.player1.y -= this.player1.speed;
+        if (this.keys['KeyS'] && this.player1.y < 620) this.player1.y += this.player1.speed;
+
+        // --- HUMAN OPERATOR 2 MATRIX BUS (Arrow Layout for Doubles, or fallback mapping) ---
+        if (this.player2.active) {
+            if (this.keys['ArrowLeft'] && this.player2.x > this.courtBounds.left) this.player2.x -= this.player2.speed;
+            if (this.keys['ArrowRight'] && this.player2.x < this.courtBounds.right) this.player2.x += this.player2.speed;
+            if (this.keys['ArrowUp'] && this.player2.y > 380) this.player2.y -= this.player2.speed;
+            if (this.keys['ArrowDown'] && this.player2.y < 620) this.player2.y += this.player2.speed;
+        } else {
+            // Singles Mode allows hybrid input control systems using mirror arrows
+            if (this.keys['ArrowLeft'] && this.player1.x > this.courtBounds.left) this.player1.x -= this.player1.speed;
+            if (this.keys['ArrowRight'] && this.player1.x < this.courtBounds.right) this.player1.x += this.player1.speed;
+            if (this.keys['ArrowUp'] && this.player1.y > 380) this.player1.y -= this.player1.speed;
+            if (this.keys['ArrowDown'] && this.player1.y < 620) this.player1.y += this.player1.speed;
+        }
+
+        // Tossing Sequence Guard Loop Integration (Resolving the spacebar launch vector exploit)
+        if (this.keys['Space'] && !this.ball.active && !this.pointAwarded && this.currentServer.startsWith('player') && !this.serveDebounce) {
+            let activeServer = (this.currentServer === 'player2' && this.player2.active) ? this.player2 : this.player1;
+            this.ball.active = true;
+            this.ball.x = activeServer.x; this.ball.y = activeServer.y - 25;
+            this.ball.z = 5; this.ball.vz = 7.5;
+            this.ball.isServe = true; this.ball.isTossed = true;
+            this.ball.lastHitBy = this.currentServer;
+            this.serveDebounce = true;
+            
+            setTimeout(() => { this.serveDebounce = false; }, 300);
+            return;
+        }
+
+        // Check strike collision matrices for Player 1
+        if (this.ball.active && !this.ball.isTossed && this.ball.lastHitBy !== 'player1' && this.ball.lastHitBy !== 'player2') {
+            // P1 Boundary Intersection checks
+            let p1Dx = Math.abs(this.ball.x - this.player1.x);
+            let p1Dy = Math.abs(this.ball.y - this.player1.y);
+            if (p1Dx < 55 && p1Dy < 40 && this.ball.z <= 55) {
+                if (this.keys['KeyE']) this.processStrikingImpactIntersection('player1', 'POWER_DRIVE');
+                else if (this.keys['KeyQ']) this.processStrikingImpactIntersection('player1', 'SLICE_ARC');
+                else if (this.keys['KeyR']) this.processStrikingImpactIntersection('player1', 'DROP_SHOT');
+                else if (this.keys['KeyF']) this.processStrikingImpactIntersection('player1', 'SMASH_STRIKE');
+                else if (this.keys['Space']) {
+                    this.processStrikingImpactIntersection('player1', 'STANDARD_FLAT');
+                    this.keys['Space'] = false;
+                }
+            }
+
+            // P2 Boundary Intersection checks
+            if (this.player2.active) {
+                let p2Dx = Math.abs(this.ball.x - this.player2.x);
+                let p2Dy = Math.abs(this.ball.y - this.player2.y);
+                if (p2Dx < 55 && p2Dy < 40 && this.ball.z <= 55) {
+                    if (this.keys['KeyM']) this.processStrikingImpactIntersection('player2', 'POWER_DRIVE');
+                    else if (this.keys['KeyK']) this.processStrikingImpactIntersection('player2', 'SLICE_ARC');
+                    else if (this.keys['KeyL']) this.processStrikingImpactIntersection('player2', 'DROP_SHOT');
+                    else if (this.keys['KeyI']) this.processStrikingImpactIntersection('player2', 'SMASH_STRIKE');
+                    else if (this.keys['Space']) {
+                        this.processStrikingImpactIntersection('player2', 'STANDARD_FLAT');
+                        this.keys['Space'] = false;
+                    }
+                }
+            }
+        }
+
+        // Handle Serve Strikes for active player during execution phase
+        if (this.ball.active && this.ball.isTossed && this.ball.lastHitBy.startsWith('player') && !this.serveDebounce) {
+            let activeServerUnit = this.ball.lastHitBy === 'player2' ? this.player2 : this.player1;
+            let sDx = Math.abs(this.ball.x - activeServerUnit.x);
+            let sDy = Math.abs(this.ball.y - activeServerUnit.y);
+            
+            if (sDx < 60 && sDy < 45 && this.ball.z > 10 && this.ball.vz < 1) {
+                if (this.ball.lastHitBy === 'player1') {
+                    if (this.keys['KeyE']) this.processStrikingImpactIntersection('player1', 'POWER_DRIVE');
+                    else if (this.keys['KeyQ']) this.processStrikingImpactIntersection('player1', 'SLICE_ARC');
+                    else if (this.keys['Space']) {
+                        this.processStrikingImpactIntersection('player1', 'STANDARD_FLAT');
+                        this.keys['Space'] = false;
+                    }
+                } else if (this.ball.lastHitBy === 'player2') {
+                    if (this.keys['KeyM']) this.processStrikingImpactIntersection('player2', 'POWER_DRIVE');
+                    else if (this.keys['KeyK']) this.processStrikingImpactIntersection('player2', 'SLICE_ARC');
+                    else if (this.keys['Space']) {
+                        this.processStrikingImpactIntersection('player2', 'STANDARD_FLAT');
+                        this.keys['Space'] = false;
+                    }
+                }
+            }
+        }
+    },
+
+    triggerImpactVibe() {
+        const node = document.getElementById('shake-node');
+        node.classList.add('shake-active');
+        setTimeout(() => node.classList.remove('shake-active'), 250);
+    },
+
+    processStrikingImpactIntersection(who, strikeType) {
+        this.ball.bounceState = 'AIRBORNE';
+        this.ball.lastHitBy = who;
+        this.ball.spinX = 0;
+        this.ball.isTossed = false;
+
+        let actorUnit = who === 'player1' ? this.player1 : (who === 'player2' ? this.player2 : (who === 'ai1' ? this.ai1 : this.ai2));
+
+        if (who.startsWith('player')) {
+            this.rallyCount++;
+            document.getElementById('rally-counter').innerText = `RALLY STREAK: ${this.rallyCount}`;
+            this.isPowerShotActive = false;
+            this.ball.isServe = false;
+
+            let angleControl = (actorUnit.x - this.ball.x) * -0.06;
+
+            // Anti-Spam Strategy Assessment Node Tracker
+            if (strikeType === 'POWER_DRIVE' || strikeType === 'SLICE_ARC') {
+                this.playerPowerStreak++;
+                if (this.playerPowerStreak > 3) {
+                    this.aiEnforcedSmashQueued = (Math.random() < 0.75);
+                    document.getElementById('anti-spam-status').innerText = "SPAM DETECTION: CRITICAL LIMIT";
+                }
+            } else {
+                this.playerPowerStreak = Math.max(0, this.playerPowerStreak - 1);
+                if (this.playerPowerStreak <= 3) document.getElementById('anti-spam-status').innerText = "SPAM DETECTION: NOMINAL";
+            }
+
+            if (strikeType === 'POWER_DRIVE') {
+                this.isPowerShotActive = true;
+                this.ball.vy = -12.5; this.ball.vx = angleControl * 1.1; this.ball.vz = 3.6;
+                this.announce("FAST DRIVE", "var(--neon-blue)");
+            } else if (strikeType === 'SLICE_ARC') {
+                this.ball.vy = -8.2; this.ball.vx = angleControl + (actorUnit.x < 500 ? 1.6 : -1.6); this.ball.vz = 5.8;
+                this.ball.spinX = actorUnit.x < 500 ? 1.8 : -1.8;
+                this.announce("SLICE ARC", "#ccff00");
+            } else if (strikeType === 'DROP_SHOT') {
+                this.ball.vy = -5.0; this.ball.vx = angleControl * 0.5; this.ball.vz = 4.2;
+                this.announce("DROP SHOT", "#00ffaa");
+            } else if (strikeType === 'SMASH_STRIKE') {
+                if (this.ball.z > 22) {
+                    this.isPowerShotActive = true;
+                    this.triggerImpactVibe();
+                    this.ball.vy = -16.0; this.ball.vx = angleControl * 1.4; this.ball.vz = 1.0;
+                    this.announce("CRUSHING SMASH", "var(--ball-yellow)");
+                } else {
+                    this.ball.vy = -3.5; this.ball.vz = 0.5; this.ball.vx = angleControl;
+                    this.announce("SMASH NET CRASH", "var(--neon-pink)");
+                }
+            } else { 
+                this.ball.vy = -9.8; this.ball.vx = angleControl; this.ball.vz = 4.2;
+            }
+
+            if (Math.abs(this.ball.vx) > 4.5) this.ball.vx = Math.sign(this.ball.vx) * 4.5;
+
+        } else {
+            // --- AI MULTI-AGENT RESPONSE CONTROL LAYER ---
+            if (strikeType === 'AI_FAULT_SERVE') {
+                this.ball.vy = 13.0; this.ball.vx = actorUnit.x < 500 ? 3.6 : -3.6; this.ball.vz = 3.8;
+                this.ball.isServe = false; return;
+            }
+            if (strikeType === 'AI_GOOD_SERVE') {
+                this.announce("AI POWER SERVE", "var(--neon-pink)");
+                this.ball.vy = 8.5; this.ball.vz = 3.2; this.ball.vx = actorUnit.x < 500 ? 2.2 : -2.2;
+                this.ball.isServe = false; return;
+            }
+
+            let errorRoll = Math.random();
+            let aiWillCommitError = false;
+            if (this.difficulty === "EASY" && errorRoll > 0.45) aiWillCommitError = true;
+            if (this.difficulty === "MEDIUM" && errorRoll > 0.82) aiWillCommitError = true;
+            if (this.difficulty === "HARD" && errorRoll > 0.95) aiWillCommitError = true;
+
+            if (this.aiEnforcedSmashQueued) {
+                this.aiEnforcedSmashQueued = false;
+                this.isPowerShotActive = true;
+                this.triggerImpactVibe();
+                this.announce("AI COUNTER SMASH!", "var(--neon-pink)");
+                let targetX = (Math.random() > 0.5 && this.player2.active) ? this.player2.x : this.player1.x;
+                this.ball.vy = 16.0; this.ball.vx = (targetX - this.ball.x) / 24; this.ball.vz = 1.2;
+                return;
+            }
+
+            if (aiWillCommitError) {
+                if (Math.random() > 0.4) {
+                    this.ball.vy = 15.5; this.ball.vx = Math.random() > 0.5 ? 4.2 : -4.2; this.ball.vz = 4.8;
+                    this.announce("AI UNFORCED ERROR", "#ffa200");
+                } else {
+                    this.ball.vy = 3.5; this.ball.vz = 1.0; this.ball.vx = (Math.random() - 0.5) * 1.2;
+                    this.announce("AI NET MIS-HIT", "#ffa200");
+                }
+                return;
+            }
+
+            // High intelligence spatial target selection
+            let targetX = this.courtBounds.left + 50 + Math.random() * (this.courtBounds.right - this.courtBounds.left - 100);
+            let targetY = Math.random() > 0.65 ? 560 : 420;
+            this.ball.vy = 9.2; this.ball.vz = 4.0;
+
+            let flightSteps = (targetY - this.ball.y) / this.ball.vy;
+            if (flightSteps <= 0) flightSteps = 35;
+            this.ball.vx = (targetX - this.ball.x) / flightSteps;
+        }
+    },
+
+    updateAI() {
+        let globalSpeed = this.difficulty === "EASY" ? 5.0 : (this.difficulty === "MEDIUM" ? 7.2 : 9.5);
+        this.ai1.speed = globalSpeed;
+        this.ai2.speed = globalSpeed;
+
+        if (this.ball.active && this.ball.vy < 0 && !this.ball.isTossed) {
+            this.ai1.decisionTimer++;
+            if (this.ai1.decisionTimer >= this.ai1.reactionInterval) {
+                this.ai1.decisionTimer = 0;
+                
+                // Trajectory Prediction Engine: Solves spin equations over court area variables
+                let simX = this.ball.x;
+                let simY = this.ball.y;
+                let simVx = this.ball.vx;
+                let simSpin = this.ball.spinX;
+                let simVy = this.ball.vy;
+                
+                for (let i = 0; i < 150; i++) {
+                    simX += simVx + simSpin;
+                    simY += simVy;
+                    if (simY <= this.ai1.y) break;
+                }
+
+                let errorRange = this.difficulty === "EASY" ? 55 : (this.difficulty === "MEDIUM" ? 18 : 0);
+                let predictedInterceptX = simX + ((Math.random() - 0.5) * errorRange);
+
+                // Assign intercept roles dynamically in Doubles Mode
+                if (this.ai2.active) {
+                    if (predictedInterceptX < 500) {
+                        this.ai1.targetX = predictedInterceptX;
+                        this.ai2.targetX = 650; // Guard right wing space
+                    } else {
+                        this.ai2.targetX = predictedInterceptX;
+                        this.ai1.targetX = 350; // Guard left wing space
+                    }
+                } else {
+                    this.ai1.targetX = predictedInterceptX;
+                }
+            }
+        } else if (!this.ball.active) {
+            if (this.ai2.active) {
+                this.ai1.targetX = 350; this.ai2.targetX = 650;
+            } else {
+                this.ai1.targetX = 500;
+            }
+        }
+
+        // Run Engine Kinematics for Agent 1
+        let dx1 = this.ai1.targetX - this.ai1.x;
+        if (Math.abs(dx1) > 10) this.ai1.vx += Math.sign(dx1) * 0.8;
+        else this.ai1.vx *= 0.65;
+        this.ai1.vx = Math.max(-this.ai1.speed, Math.min(this.ai1.speed, this.ai1.vx));
+        this.ai1.x += this.ai1.vx;
+        this.ai1.x = Math.max(this.courtBounds.left, Math.min(this.courtBounds.right, this.ai1.x));
+
+        // Run Engine Kinematics for Agent 2 (If active inside grid)
+        if (this.ai2.active) {
+            let dx2 = this.ai2.targetX - this.ai2.x;
+            if (Math.abs(dx2) > 10) this.ai2.vx += Math.sign(dx2) * 0.8;
+            else this.ai2.vx *= 0.65;
+            this.ai2.vx = Math.max(-this.ai2.speed, Math.min(this.ai2.speed, this.ai2.vx));
+            this.ai2.x += this.ai2.vx;
+            this.ai2.x = Math.max(this.courtBounds.left, Math.min(this.courtBounds.right, this.ai2.x));
+        }
+
+        // Collision interception verification loops
+        let interceptRange = this.difficulty === "HARD" ? 65 : 52;
+        
+        if (this.ball.active && (this.ball.lastHitBy === 'player1' || this.ball.lastHitBy === 'player2')) {
+            // AI 1 Intercept Matrix
+            let xDiff1 = Math.abs(this.ball.x - this.ai1.x);
+            let yDiff1 = Math.abs(this.ball.y - this.ai1.y);
+            if (xDiff1 < interceptRange && yDiff1 < 30 && this.ball.z <= 60) {
+                this.processStrikingImpactIntersection('ai1', null);
+                return;
+            }
+
+            // AI 2 Intercept Matrix
+            if (this.ai2.active) {
+                let xDiff2 = Math.abs(this.ball.x - this.ai2.x);
+                let yDiff2 = Math.abs(this.ball.y - this.ai2.y);
+                if (xDiff2 < interceptRange && yDiff2 < 30 && this.ball.z <= 60) {
+                    this.processStrikingImpactIntersection('ai2', null);
+                }
+            }
+        }
+    },
+
+    updatePhysics() {
+        if (!this.ball.active || this.pointAwarded) return;
+
+        this.ball.trail.push({ x: this.ball.x, y: this.ball.y, z: this.ball.z });
+        if (this.ball.trail.length > this.ball.maxTrail) this.ball.trail.shift();
+
+        this.ball.x += this.ball.vx + this.ball.spinX;
+        this.ball.y += this.ball.vy;
+        this.ball.z += this.ball.vz;
+
+        if (!this.ball.isTossed) this.checkNetCollision();
+
+        if (this.ball.z > 0) {
+            this.ball.vz -= this.gravity;
+        } else {
+            this.ball.z = 0;
+            if (this.ball.isTossed) {
+                this.handleFault(); return;
+            }
+            if (this.ball.vz <= 0) {
+                this.processGroundImpactIntersection();
+                if (this.pointAwarded) return;
+                this.ball.vz = -this.ball.vz * 0.55; this.ball.z = 1.5;
+            }
+        }
+
+        // Matrix Arena Boundary Check Rules
+        if (this.ball.y < 15 || this.ball.y > 635 || this.ball.x < (this.courtBounds.left - 30) || this.ball.x > (this.courtBounds.right + 30)) {
+            if (!this.pointAwarded) {
+                let hitByPlayer = this.ball.lastHitBy.startsWith('player');
+                if (this.ball.bounceState === 'AIRBORNE') {
+                    this.handlePoint(hitByPlayer ? 'ai' : 'player');
+                } else {
+                    this.handlePoint(hitByPlayer ? 'player' : 'ai');
+                }
+            }
+        }
+    },
+
+    checkNetCollision() {
+        if (this.pointAwarded) return;
+        const prevY = this.ball.trail.length > 0 ? this.ball.trail[this.ball.trail.length - 1].y : this.ball.y;
+        if ((prevY < this.netY && this.ball.y >= this.netY) || (prevY > this.netY && this.ball.y <= this.netY)) {
+            if (this.ball.z <= this.netHeight) {
+                this.announce("NET STRUCK", "var(--neon-pink)");
+                this.handlePoint(this.ball.lastHitBy.startsWith('player') ? 'ai' : 'player');
+            }
+        }
+    },
+
+    processGroundImpactIntersection() {
+        if (this.ball.bounceState === 'FIRST_BOUNCE') {
+            this.ball.bounceState = 'DOUBLE_BOUNCE';
+            this.handlePoint(this.ball.lastHitBy.startsWith('player') ? 'player' : 'ai');
+        } else if (this.ball.bounceState === 'AIRBORNE') {
+            this.ball.bounceState = 'FIRST_BOUNCE';
+        }
+    },
+
+    handleFault() {
+        if (this.pointAwarded) return;
+        this.pointAwarded = true;
+
+        const banner = document.getElementById('fault-banner');
+        if (this.serveAttempt === 1) {
+            this.announce("FAULT RECORDED", "#ffcc00");
+            banner.innerText = "SINGLE FAULT DETECTED [1 / 2]";
+            this.serveAttempt = 2;
+            setTimeout(() => this.resetPosition(), 1200);
+        } else {
+            this.announce("DOUBLE FAULT", "var(--neon-pink)");
+            banner.innerText = ""; this.serveAttempt = 1;
+            
+            if (this.currentServer.startsWith('player')) this.score.ai++;
+            else this.score.player++;
+
+            this.checkScoreState();
+            setTimeout(() => this.resetPosition(), 1200);
+        }
+    },
+
+    handlePoint(winner) {
+        if (this.pointAwarded) return;
+        this.pointAwarded = true;
+
+        if (winner === 'player') {
+            this.score.player++;
+            this.memoryHistory.currentSet.playerPointsWon++;
+        } else {
+            this.score.ai++;
+            this.memoryHistory.currentSet.aiPointsWon++;
+        }
+
+        this.serveAttempt = 1;
+        document.getElementById('fault-banner').innerText = "";
+        this.checkScoreState();
+
+        this.announce(winner === 'player' ? "POINT TO HUMAN" : "POINT TO AI CORE", winner === 'player' ? 'var(--neon-blue)' : 'var(--neon-pink)');
+        setTimeout(() => this.resetPosition(), 1300);
+    },
+
+    checkScoreState() {
+        const p = this.score.player; const a = this.score.ai;
+
+        if (this.isTiebreak) {
+            if (p >= 7 && (p - a) >= 2) {
+                this.score.gamesP++; this.closeOutSet('player');
+            } else if (a >= 7 && (a - p) >= 2) {
+                this.score.gamesA++; this.closeOutSet('ai');
+            }
+        } else {
+            if (p >= 3 && a >= 3) {
+                if (this.deuceMode === "SUDDEN_DEATH") {
+                    if (p > a) {
+                        this.score.gamesP++; this.resetGameScore(); this.alternateServerCheck();
+                    } else if (a > p) {
+                        this.score.gamesA++; this.resetGameScore(); this.alternateServerCheck();
+                    }
+                } else { 
+                    if (p >= 4 && (p - a) >= 2) {
+                        this.score.gamesP++; this.resetGameScore(); this.alternateServerCheck();
+                    } else if (a >= 4 && (a - p) >= 2) {
+                        this.score.gamesA++; this.resetGameScore(); this.alternateServerCheck();
+                    }
+                }
+            } else {
+                if (p === 4) {
+                    this.score.gamesP++; this.resetGameScore(); this.alternateServerCheck();
+                } else if (a === 4) {
+                    this.score.gamesA++; this.resetGameScore(); this.alternateServerCheck();
+                }
+            }
+
+            // Game count calculation matrices
+            const gp = this.score.gamesP; const ga = this.score.gamesA;
+            
+            if (this.setLength === "1G") {
+                if (gp === 1) this.closeOutSet('player');
+                else if (ga === 1) this.closeOutSet('ai');
+            } else if (this.setLength === "2G") {
+                if (gp === 1 && ga === 1) {
+                    this.isTiebreak = true; this.announce("TIEBREAK DECIER", "var(--ball-yellow)");
+                } else if (gp >= 2 && (gp - ga) >= 1) {
+                    this.closeOutSet('player');
+                } else if (ga >= 2 && (ga - gp) >= 1) {
+                    this.closeOutSet('ai');
+                }
+            } else { 
+                if (gp === 6 && ga === 6) {
+                    this.isTiebreak = true; this.announce("TIEBREAK ACTIVE", "var(--ball-yellow)");
+                } else if (gp >= 6 && (gp - ga) >= 2) {
+                    this.closeOutSet('player');
+                } else if (ga >= 6 && (ga - gp) >= 2) {
+                    this.closeOutSet('ai');
+                }
+            }
+        }
+        this.updateScoreboard();
+    },
+
+    resetGameScore() {
+        this.score.player = 0; this.score.ai = 0;
+    },
+
+    alternateServerCheck() {
+        if (this.gameMode === "DOUBLES") {
+            const rotation = ['player1', 'ai1', 'player2', 'ai2'];
+            let idx = rotation.indexOf(this.currentServer);
+            this.currentServer = rotation[(idx + 1) % 4];
+        } else {
+            this.currentServer = this.currentServer === 'player1' ? 'ai1' : 'player1';
+        }
+    },
+
+    closeOutSet(winner) {
+        if (winner === 'player') this.score.setsP++;
+        else this.score.setsA++;
+
+        this.isRunning = false;
+        this.displayStatsSummaryModal();
+    },
+
+    displayStatsSummaryModal() {
+        document.getElementById('stat-games-p').innerText = this.score.gamesP;
+        document.getElementById('stat-games-a').innerText = this.score.gamesA;
+        document.getElementById('stat-pts-p').innerText = this.memoryHistory.currentSet.playerPointsWon;
+        document.getElementById('stat-pts-a').innerText = this.memoryHistory.currentSet.aiPointsWon;
+        document.getElementById('stat-match-sets').innerText = `${this.score.setsP} - ${this.score.setsA} Sets`;
+
+        if (this.score.setsP === this.maxSetsToWin || this.score.setsA === this.maxSetsToWin) {
+            document.getElementById('modal-title').innerText = this.score.setsP > this.score.setsA ? "MATCH CONCLUDED: HUMAN TEAM WINS!" : "MATCH CONCLUDED: AI CORES WIN!";
+            document.getElementById('modal-continue-btn').innerText = "SYSTEM REBOOT MATRIX";
+            document.getElementById('modal-continue-btn').onclick = () => window.location.reload();
+        } else {
+            document.getElementById('modal-title').innerText = "SET TERMINATED";
+            document.getElementById('modal-continue-btn').innerText = "DISPATCH NEXT SIMULATION SET";
+            document.getElementById('modal-continue-btn').onclick = () => Game.dismissStatsModal();
+        }
+        document.getElementById('stats-overlay').style.display = 'flex';
+    },
+
+    dismissStatsModal() {
+        document.getElementById('stats-overlay').style.display = 'none';
+        this.score.gamesP = 0; this.score.gamesA = 0;
+        this.resetGameScore(); this.isTiebreak = false;
+        this.memoryHistory.currentSet = { playerPointsWon: 0, aiPointsWon: 0 };
+        this.alternateServerCheck();
+        this.isRunning = true;
+        this.resetPosition();
+    },
+
+    updateScoreboard() {
+        const p = this.score.player; const a = this.score.ai;
+        let pText, aText;
+
+        if (this.isTiebreak) {
+            pText = p.toString(); aText = a.toString();
+        } else {
+            if (p >= 3 && a >= 3) {
+                if (p === a) {
+                    pText = "DEUCE"; aText = "DEUCE";
+                } else {
+                    if (this.deuceMode === "SUDDEN_DEATH") {
+                        pText = "40"; aText = "40";
+                    } else {
+                        pText = p > a ? "ADVANTAGE" : "40";
+                        aText = a > p ? "ADVANTAGE" : "40";
+                    }
+                }
+            } else {
+                pText = this.score.pointsMap[p] || "LOVE";
+                aText = this.score.pointsMap[a] || "LOVE";
+            }
+        }
+
+        document.getElementById('player-points').innerText = pText;
+        document.getElementById('ai-points').innerText = aText;
+        document.getElementById('sets-summary').innerText = `SETS: ${this.score.setsP} - ${this.score.setsA} | GAMES: ${this.score.gamesP} - ${this.score.gamesA}`;
+    },
+
+    announce(txt, col) {
+        const el = document.getElementById('announcer');
+        el.innerText = txt; el.style.color = col; el.style.opacity = 1;
+        if (this.msgTimer) clearTimeout(this.msgTimer);
+        this.msgTimer = setTimeout(() => el.style.opacity = 0, 1100);
+    },
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.width, this.height);
+
+        this.drawCourtLines(ctx);
+        this.drawNetMeshStructure(ctx);
+
+        // Draw active structural entities based on Game Mode configuration array
+        this.drawPaddleNode(this.player1.x, this.player1.y, this.player1.w, this.player1.h, this.player1.color, true);
+        if (this.player2.active) {
+            this.drawPaddleNode(this.player2.x, this.player2.y, this.player2.w, this.player2.h, this.player2.color, true);
+        }
+
+        this.drawPaddleNode(this.ai1.x, this.ai1.y, this.ai1.w, this.ai1.h, 'var(--neon-pink)', true);
+        if (this.ai2.active) {
+            this.drawPaddleNode(this.ai2.x, this.ai2.y, this.ai2.w, this.ai2.h, 'var(--neon-pink)', true);
+        }
+
+        if (this.ball.active) {
+            // Ball Shadow Projection Calculation
+            ctx.fillStyle = 'rgba(0, 4, 2, 0.45)';
+            ctx.beginPath();
+            ctx.ellipse(this.ball.x, this.ball.y, 7 + (this.ball.z * 0.04), 3.5 + (this.ball.z * 0.02), 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Render Particle Trajectory Trail
+            let trailColor = this.isPowerShotActive ? '255, 0, 85' : '204, 255, 0';
+            for (let i = 0; i < this.ball.trail.length; i++) {
+                let opacity = (i / this.ball.trail.length) * 0.3;
+                let size = (i / this.ball.trail.length) * this.ball.radius;
+                ctx.fillStyle = `rgba(${trailColor}, ${opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.ball.trail[i].x, this.ball.trail[i].y - this.ball.trail[i].z, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Core Light Core Engine Processing
+            ctx.fillStyle = this.isPowerShotActive ? 'var(--neon-pink)' : 'var(--ball-yellow)';
+            ctx.shadowBlur = this.isPowerShotActive ? 22 : 12; ctx.shadowColor = ctx.fillStyle;
+            ctx.beginPath(); ctx.arc(this.ball.x, this.ball.y - this.ball.z, this.ball.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+        } else {
+            if (this.currentServer.startsWith('ai')) {
+                let activeServer = this.currentServer === 'ai2' ? this.ai2 : this.ai1;
+                ctx.fillStyle = 'rgba(255, 0, 85, 0.4)';
+                ctx.beginPath(); ctx.arc(activeServer.x, activeServer.y + 25, 6, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+    },
+
+    drawCourtLines(ctx) {
+        let gridCol = (this.isTiebreak || (this.score.player >= 3 && this.score.ai >= 3)) ? 'rgba(204, 255, 0, 0.22)' : 'rgba(0, 242, 255, 0.13)';
+        ctx.strokeStyle = gridCol; ctx.lineWidth = 4;
+        
+        // Dynamic Outer Bounds Rendering (Doubles vs Singles structural markers)
+        ctx.strokeRect(150, 40, 700, 570); // Doubles Alleys Lines
+        ctx.strokeRect(200, 40, 600, 570); // Singles Inner Lines
+
+        ctx.beginPath();
+        ctx.moveTo(200, 185); ctx.lineTo(800, 185);
+        ctx.moveTo(200, 425); ctx.lineTo(800, 425);
+        ctx.moveTo(500, 185); ctx.lineTo(500, 425);
+        ctx.stroke();
+    },
+
+    drawNetMeshStructure(ctx) {
+        ctx.lineWidth = 6; ctx.strokeStyle = "#0b1a16";
+        ctx.beginPath(); ctx.moveTo(135, this.netY); ctx.lineTo(135, this.netY - this.netHeight); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(865, this.netY); ctx.lineTo(865, this.netY - this.netHeight); ctx.stroke();
+
+        ctx.fillStyle = "rgba(0, 242, 255, 0.03)";
+        ctx.fillRect(140, this.netY - this.netHeight, 720, this.netHeight);
+
+        ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(135, this.netY - this.netHeight); ctx.lineTo(865, this.netY - this.netHeight); ctx.stroke();
+    },
+
+    drawPaddleNode(x, y, w, h, col, glow) {
+        if (glow) { this.ctx.shadowBlur = 15; this.ctx.shadowColor = col; }
+        this.ctx.fillStyle = col;
+        this.ctx.fillRect(x - w / 2, y - h / 2, w, h);
+        this.ctx.shadowBlur = 0;
+    },
+
+    loop() {
+        if (!this.isRunning) return;
+        this.handleInput();
+        this.updatePhysics();
+        this.updateAI();
+        this.draw();
+        requestAnimationFrame(() => this.loop());
+    }
+};
+</script>
+</body>
+</html>
