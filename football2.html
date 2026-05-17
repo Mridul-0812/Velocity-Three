@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Championship Pro 5v5 | Tactical Match Engine</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800;900&family=Courier+Prime:wght@700&display=swap" rel="stylesheet">
+    <title>Championship Pro 5v5 | Tactical Rebalance</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght=600;800;900&family=Courier+Prime:wght=700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-dark: #040712;
@@ -13,7 +13,7 @@
             --ui-blue: #00e5ff;
             --ui-pink: #ff0055;
             --ui-gold: #ffea00;
-            --pitch-green: #14421b;
+            --pitch-green: #113817;
         }
 
         body, html {
@@ -30,7 +30,7 @@
         #viewport-container {
             position: relative;
             width: 1024px; height: 680px;
-            background: var(--pitch-green);
+            background: #14421b;
             border: 4px solid #142038;
             border-radius: 14px;
             box-shadow: 0 40px 100px rgba(0,0,0,0.95);
@@ -61,7 +61,7 @@
         }
 
         .team-badge {
-            font-size: 15px; font-weight: 900; letter-spacing: 2px; min-width: 180px;
+            font-size: 14px; font-weight: 900; letter-spacing: 1px; min-width: 200px;
             text-transform: uppercase;
         }
         #home-badge { text-align: right; color: var(--ui-blue); }
@@ -100,14 +100,24 @@
         #kick-charge-thumb { width: 0%; background: linear-gradient(90deg, var(--ui-gold), var(--ui-pink)); }
 
         .center-notification {
-            position: absolute; top: 35%; width: 100%;
+            position: absolute; top: 32%; width: 100%;
             text-align: center; font-size: 64px; font-weight: 900;
             color: #ffffff; text-shadow: 0 0 20px #000, 0 0 40px var(--ui-pink);
             transform: scale(0.5); opacity: 0; pointer-events: none; z-index: 25;
-            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             letter-spacing: 4px; text-transform: uppercase;
         }
         .center-notification.trigger-pop { transform: scale(1); opacity: 1; }
+
+        #countdown-overlay {
+            position: absolute; top: 46%; width: 100%;
+            text-align: center; font-size: 90px; font-weight: 900;
+            color: var(--ui-gold); text-shadow: 0 0 30px rgba(0,0,0,0.9), 0 0 20px var(--ui-gold);
+            pointer-events: none; z-index: 30; font-family: 'Montserrat', sans-serif;
+            opacity: 0; transform: scale(0.3);
+            transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.3);
+        }
+        #countdown-overlay.pop-active { opacity: 1; transform: scale(1); }
 
         .modal-screen {
             position: absolute; inset: 0;
@@ -117,14 +127,14 @@
             overflow-y: auto;
         }
 
-        .modal-title { font-size: 36px; font-weight: 900; letter-spacing: 6px; margin: 0 0 4px 0; text-shadow: 0 0 25px rgba(0,229,255,0.3); text-transform: uppercase; }
+        .modal-title { font-size: 34px; font-weight: 900; letter-spacing: 6px; margin: 0 0 4px 0; text-shadow: 0 0 25px rgba(0,229,255,0.3); text-transform: uppercase; }
         .modal-subtitle { font-size: 11px; color: #5f79a3; letter-spacing: 3px; margin: 0 0 20px 0; text-transform: uppercase; }
 
-        .settings-matrix { display: flex; gap: 20px; width: 100%; max-width: 980px; justify-content: center; margin-bottom: 20px; }
-        .selection-panel { background: rgba(255,255,255,0.01); border: 2px solid #121f36; border-radius: 8px; padding: 12px; width: 33%; display: flex; flex-direction: column; gap: 6px; }
+        .settings-matrix { display: flex; gap: 15px; width: 100%; max-width: 1000px; justify-content: center; margin-bottom: 20px; }
+        .selection-panel { background: rgba(255,255,255,0.01); border: 2px solid #121f36; border-radius: 8px; padding: 12px; width: 25%; display: flex; flex-direction: column; gap: 6px; }
         .panel-header { font-size: 11px; font-weight: 900; color: var(--ui-blue); border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 6px; letter-spacing: 2px; text-transform: uppercase; }
         
-        .list-scroller { display: flex; flex-direction: column; gap: 5px; height: 210px; overflow-y: auto; padding-right: 4px; }
+        .list-scroller { display: flex; flex-direction: column; gap: 5px; height: 190px; overflow-y: auto; padding-right: 4px; }
         .list-scroller::-webkit-scrollbar { width: 4px; }
         .list-scroller::-webkit-scrollbar-thumb { background: #172742; border-radius: 2px; }
 
@@ -132,11 +142,14 @@
             background: #060a12; border: 1px solid #10192b;
             padding: 10px 12px; border-radius: 4px; cursor: pointer;
             display: flex; justify-content: space-between; align-items: center;
-            font-size: 12px; font-weight: 700; transition: all 0.1s ease;
+            font-size: 11px; font-weight: 700; transition: all 0.1s ease;
         }
         .card-option:hover { border-color: var(--ui-blue); background: #0c1424; }
         .card-option.selected { border-color: #39ff14; background: #061710; box-shadow: 0 0 10px rgba(57,255,20,0.1); }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); }
+
+        .difficulty-meta { display: flex; flex-direction: column; gap: 2px; }
+        .stars-indicator { color: var(--ui-gold); font-size: 10px; margin-top: 2px; letter-spacing: 1px; }
 
         .cta-button {
             background: linear-gradient(135deg, var(--ui-blue), #0044ff);
@@ -149,7 +162,7 @@
 
         .hardware-legend {
             display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;
-            margin-top: 20px; width: 100%; max-width: 940px;
+            margin-top: 15px; width: 100%; max-width: 940px;
             font-size: 11px; color: #4b5e7c; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;
         }
         .hardware-legend div span { color: #ffffff; background: #090f1a; padding: 1px 5px; border-radius: 3px; font-weight: bold; border: 1px solid #141f33; margin-right: 4px; }
@@ -163,7 +176,7 @@
         }
         .analytics-table th { background: #0a111f; color: var(--ui-blue); padding: 10px; text-transform: uppercase; font-size: 11px; letter-spacing: 1px; }
         .analytics-table tr:nth-child(even) { background: #070c14; }
-        .analytics-table td { padding: 7px 12px; text-align: center; border-bottom: 1px solid #0e1829; font-family: 'Courier Prime', monospace; font-size: 13px; }
+        .analytics-table td { padding: 6px 12px; text-align: center; border-bottom: 1px solid #0e1829; font-family: 'Courier Prime', monospace; font-size: 13px; }
         .analytics-table td.label-col { font-family: 'Montserrat', sans-serif; font-weight: 700; color: #8fa3bf; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
 
         .hidden { display: none !important; }
@@ -180,7 +193,7 @@
             <span id="score-readout" class="score-ticker">00 - 00</span>
             <span id="away-badge" class="team-badge">AWAY TEAM</span>
         </div>
-        <div id="timer-box">01:30</div>
+        <div id="timer-box">02:00</div>
     </div>
 
     <div id="dashboard-gauges" class="hud-component hidden">
@@ -195,79 +208,92 @@
     </div>
 
     <div id="center-notif" class="center-notification">GOAL!</div>
+    <div id="countdown-overlay">3</div>
 
     <div id="setup-lobby" class="modal-screen">
-        <h1 class="modal-title">CHAMPIONSHIP MATCH ENGINE</h1>
-        <h2 class="modal-subtitle">Advanced Dynamic AI Tactical Override</h2>
+        <h1 class="modal-title">TACTICAL CHAMPIONSHIP SANDBOX</h1>
+        <h2 class="modal-subtitle">Dynamic Shot-Matrix & Variable Goalkeeping Architecture</h2>
         
         <div class="settings-matrix">
             <div class="selection-panel">
-                <div class="panel-header">Select Home Squad</div>
+                <div class="panel-header">Home Club</div>
                 <div class="list-scroller" id="home-team-list"></div>
             </div>
             <div class="selection-panel">
-                <div class="panel-header">Select Away Squad</div>
+                <div class="panel-header">Away Club</div>
                 <div class="list-scroller" id="away-team-list"></div>
             </div>
             <div class="selection-panel">
-                <div class="panel-header">Tactical Match Complexity</div>
+                <div class="panel-header">Engine Difficulty</div>
                 <div class="list-scroller" id="difficulty-list">
                     <div class="card-option" onclick="Engine.selectDifficulty(0, this)">
-                        <span>EASY <small style="color:#4b5e7c; margin-left:4px;">(Relaxed Defense)</small></span>
+                        <div class="difficulty-meta">
+                            <span>EASY MODE</span>
+                            <span class="stars-indicator">★☆☆☆☆</span>
+                        </div>
                         <div class="status-dot" style="background:#39ff14;"></div>
                     </div>
                     <div class="card-option" onclick="Engine.selectDifficulty(1, this)">
-                        <span>MEDIUM <small style="color:#4b5e7c; margin-left:4px;">(Standard Dynamic)</small></span>
+                        <div class="difficulty-meta">
+                            <span>MEDIUM MODE</span>
+                            <span class="stars-indicator">★★★☆☆</span>
+                        </div>
                         <div class="status-dot" style="background:#ffea00;"></div>
                     </div>
                     <div class="card-option selected" onclick="Engine.selectDifficulty(2, this)">
-                        <span>HARD PRO <small style="color:#4b5e7c; margin-left:4px;">(Elite Backline Block)</small></span>
+                        <div class="difficulty-meta">
+                            <span>HARD PRO MODE</span>
+                            <span class="stars-indicator">★★★★★</span>
+                        </div>
                         <div class="status-dot" style="background:#ff0055;"></div>
                     </div>
                 </div>
             </div>
+            <div class="selection-panel">
+                <div class="panel-header">Tactical Matrix Selection</div>
+                <div class="list-scroller" id="formation-list"></div>
+            </div>
         </div>
 
-        <button id="kickoff-trigger" class="cta-button">LAUNCH ENGINE MATCH</button>
+        <button id="kickoff-trigger" class="cta-button">LAUNCH ASYMMETRIC SYSTEM</button>
 
         <div class="hardware-legend">
-            <div><span>W / A / S / D</span> or <span>ARROWS</span> Pixel-Perfect Vector Run</div>
-            <div><span>LEFT SHIFT</span> High Velocity Sprint (Depletes Stamina Pool)</div>
-            <div><span>E KEY</span> Instant Trajectory Pass (Handover Control Instantly)</div>
-            <div><span>SPACEBAR</span> Hold to Charge Shot Vector / Release to Shoot</div>
-            <div><span>TACKLING</span> Move directly over the ball carrier to trigger challenge algorithms</div>
+            <div><span>W / A / S / D</span> or <span>ARROWS</span> Player Movement Control System</div>
+            <div><span>LEFT SHIFT</span> Velocity Sprint (Consumes Stamina Cache)</div>
+            <div><span>E KEY</span> Controlled Pass (Instantly Switches Actor Control to Closest Teammate)</div>
+            <div><span>Q KEY</span> Boot Ball / Clear Long Distance Vector (Perfect for Goalkeeper)</div>
+            <div><span>SPACEBAR</span> Hold to Charge Strike Vector / Release to Shoot</div>
         </div>
     </div>
 
     <div id="match-summary" class="modal-screen hidden">
-        <h1 class="modal-title">FINAL ANALYSIS SHEET</h1>
+        <h1 class="modal-title">TELEMETRY ANALYSIS SHEET</h1>
         <h2 id="summary-score" style="font-size: 20px; margin: 5px 0; color:#fff; letter-spacing:1px;">HOME 0 - 0 AWAY</h2>
         
         <table class="analytics-table">
             <thead>
                 <tr>
                     <th id="stat-home-name" style="width:33%;">HOME TEAM</th>
-                    <th style="width:34%;">MATCH PERFORMANCE MATRIX</th>
+                    <th style="width:34%;">PERFORMANCE PARAMETERS</th>
                     <th id="stat-away-name" style="width:33%;">AWAY TEAM</th>
                 </tr>
             </thead>
             <tbody id="telemetry-rows">
                 <tr><td id="s-home-goals" style="font-weight:bold; color:var(--ui-blue);">0</td><td class="label-col">Goals Scored</td><td id="s-away-goals" style="font-weight:bold; color:var(--ui-pink);">0</td></tr>
-                <tr><td id="s-home-xg">0.00</td><td class="label-col">Cumulative Expected Goals (xG)</td><td id="s-away-xg">0.00</td></tr>
+                <tr><td id="s-home-xg">0.00</td><td class="label-col">Expected Goals (xG)</td><td id="s-away-xg">0.00</td></tr>
                 <tr><td id="s-home-shots">0</td><td class="label-col">Total Attempted Shots</td><td id="s-away-shots">0</td></tr>
-                <tr><td id="s-home-sot">0</td><td class="label-col">Shots On Target</td><td id="s-away-sot">0</td></tr>
+                <tr><td id="s-home-sot" style="color:var(--ui-blue);">0</td><td class="label-col">Shots On Target</td><td id="s-away-sot" style="color:var(--ui-pink);">0</td></tr>
                 <tr><td id="s-home-saves">0</td><td class="label-col">Goalkeeper Saves</td><td id="s-away-saves">0</td></tr>
                 <tr><td id="s-home-passes">0</td><td class="label-col">Passes Initiated</td><td id="s-away-passes">0</td></tr>
                 <tr><td id="s-home-passacc">0%</td><td class="label-col">Passing Accuracy Track</td><td id="s-away-passacc">0%</td></tr>
                 <tr><td id="s-home-tackles">0</td><td class="label-col">Successful Tackles Cleared</td><td id="s-away-tackles">0</td></tr>
                 <tr><td id="s-home-intercepts">0</td><td class="label-col">Interceptions Captured</td><td id="s-away-intercepts">0</td></tr>
                 <tr><td id="s-home-fouls">0</td><td class="label-col">Fouls Committed</td><td id="s-away-fouls">0</td></tr>
-                <tr><td id="s-home-cards">0Y / 0R</td><td class="label-col">Disciplinary Book (Y / R)</td><td id="s-away-cards">0Y / 0R</td></tr>
                 <tr><td id="s-home-poss" style="color:var(--ui-gold);">50%</td><td class="label-col">Possession Split Rate</td><td id="s-away-poss" style="color:var(--ui-gold);">50%</td></tr>
             </tbody>
         </table>
 
-        <button class="cta-button" onclick="location.reload();">RELOAD COMPETITION LOBBY</button>
+        <button class="cta-button" onclick="location.reload();">RELAUNCH ENGINE ARCHITECTURE</button>
     </div>
 </div>
 
@@ -280,21 +306,21 @@ const SQUAD_REGISTRY = [
     {id: 4, name: "Bayern Munich", primary: "#dc052d", secondary: "#ffffff", skin: "#f6d8be", hair: "#bfa37a"},
     {id: 5, name: "Liverpool", primary: "#c8102e", secondary: "#f6eb61", skin: "#eac0a2", hair: "#523c21"},
     {id: 6, name: "Paris Saint-Germain", primary: "#002c5f", secondary: "#e30613", skin: "#d0a384", hair: "#09090a"},
-    {id: 7, name: "Arsenal", primary: "#ef0107", secondary: "#ffffff", skin: "#dfba9b", hair: "#261a0d"},
-    {id: 8, name: "Juventus", primary: "#ffffff", secondary: "#000000", skin: "#e5bfa1", hair: "#422e1b"},
-    {id: 9, name: "Inter Milan", primary: "#0053a0", secondary: "#000000", skin: "#e8c3a7", hair: "#21160c"},
-    {id: 10, name: "AC Milan", primary: "#e31b23", secondary: "#000000", skin: "#eccbb2", hair: "#171719"},
-    {id: 11, name: "Atletico Madrid", primary: "#cb3524", secondary: "#192e5b", skin: "#f2d3bb", hair: "#503925"},
-    {id: 12, name: "Borussia Dortmund", primary: "#fde100", secondary: "#000000", skin: "#ebd0b7", hair: "#eed283"},
-    {id: 13, name: "Chelsea", primary: "#034694", secondary: "#ffffff", skin: "#ecc6a7", hair: "#2d1e10"},
-    {id: 14, name: "Bayer Leverkusen", primary: "#e32219", secondary: "#000000", skin: "#f5d4b8", hair: "#bc9667"}
+    {id: 7, name: "Arsenal", primary: "#ef0107", secondary: "#ffffff", skin: "#dfba9b", hair: "#261a0d"}
 ];
 
-// Difficulty Scaling Engine - Hard difficulty tuned to 1.1x base speed and 1.3x maximum sprint burst speed
+// RE-BALANCED PROFILES: Scaled down Hard Mode speeds & narrowed intercept radius to prevent AI swarming
 const STRATEGY_PROFILES = [
-    { level: 0, aiSpeed: 2.2, maxBurstSpeed: 2.8, interceptDist: 90, shootRange: 220, aiShotCooldown: 180, keeperSaveRate: 0.55 }, 
-    { level: 1, aiSpeed: 4.3, maxBurstSpeed: 5.0, interceptDist: 260, shootRange: 350, aiShotCooldown: 110, keeperSaveRate: 0.75 }, 
-    { level: 2, aiSpeed: 4.95, maxBurstSpeed: 5.85, interceptDist: 360, shootRange: 410, aiShotCooldown: 90, keeperSaveRate: 0.90 }  
+    { level: 0, userSpeed: 3.4, userSprint: 4.8, aiSpeed: 1.6, maxBurstSpeed: 2.0, interceptDist: 90,  shootRange: 200, aiShotCooldown: 200 }, 
+    { level: 1, userSpeed: 3.2, userSprint: 4.5, aiSpeed: 2.1, maxBurstSpeed: 2.5, interceptDist: 130, shootRange: 260, aiShotCooldown: 160 }, 
+    { level: 2, userSpeed: 3.1, userSprint: 4.4, aiSpeed: 2.4, maxBurstSpeed: 2.8, interceptDist: 145, shootRange: 270, aiShotCooldown: 150 }  
+];
+
+const FORMATION_REGISTRY = [
+    { id: 0, name: "1-2-1 (Diamond)", roleMap: ['ST', 'LM', 'RM', 'CB', 'GK'], xOffsets: [420, 270, 270, 140, 45], yOffsets: [340, 150, 530, 340, 340] },
+    { id: 1, name: "2-0-2 (Square)", roleMap: ['LS', 'RS', 'LB', 'RB', 'GK'], xOffsets: [390, 390, 160, 160, 45], yOffsets: [180, 500, 180, 500, 340] },
+    { id: 2, name: "2-1-1 (Pyramid)", roleMap: ['LS', 'RS', 'CM', 'CB', 'GK'], xOffsets: [410, 410, 260, 130, 45], yOffsets: [220, 460, 340, 340, 340] },
+    { id: 3, name: "1-1-2 (Y-Formation)", roleMap: ['ST', 'AM', 'LB', 'RB', 'GK'], xOffsets: [440, 290, 150, 150, 45], yOffsets: [340, 340, 180, 500, 340] }
 ];
 
 const SoundSynth = {
@@ -313,11 +339,15 @@ const SoundSynth = {
         osc.start(); osc.stop(this.audioCtx.currentTime + duration);
     },
     strike() { this.play(260, 'triangle', 0.08, 0.5); },
+    boot() { this.play(180, 'triangle', 0.15, 0.6); },
     intercept() { this.play(320, 'sine', 0.06, 0.4); },
     foulSound() { this.play(150, 'sawtooth', 0.25, 0.3); },
     whistle() {
         this.play(1100, 'square', 0.06, 0.1);
         setTimeout(() => this.play(1450, 'square', 0.16, 0.1), 55);
+    },
+    countdownBeep(isHigh) {
+        this.play(isHigh ? 880 : 440, 'sine', 0.12, 0.25);
     },
     cheer() {
         this.play(180, 'sawtooth', 0.2, 0.2);
@@ -331,43 +361,66 @@ const Engine = {
     inputKeys: {},
     
     homeSquadIdx: 0, awaySquadIdx: 1, difficultyIdx: 2,
+    homeFormationIdx: 0, awayFormationIdx: 0,
     homeConfig: null, awayConfig: null,
     
     isMatchActive: false,
-    timerFrames: 0,
+    matchDurationSeconds: 120, 
+    timeRemainingSeconds: 120,
+    lastClockTimestamp: 0, 
+    
     scoreTracker: [0, 0],
     sequenceLockout: false,
     foulFreezeTimer: 0,
     aiShotCooldownTimer: 0,
     
+    isCountdownRunning: false,
+    countdownValue: 3,
+    countdownTimer: 0,
+
     staminaPool: 100,
     strikePower: 0,
     isChargingStrike: false,
     spacePressedLastFrame: false,
     
-    ball: { x: 512, y: 340, vx: 0, vy: 0, radius: 9, currentOwner: null, freeFrames: 0, ownerDuration: 0, hasBeenCounted: false },
+    ball: { 
+        x: 512, y: 340, vx: 0, vy: 0, radius: 9, 
+        currentOwner: null, freeFrames: 0, ownerDuration: 0, 
+        lastShotTeam: null, releasePower: 0, originDistanceToGoal: 0 
+    },
     homeTeamRoster: [],
     awayTeamRoster: [],
     controlledPlayer: null,
 
-    // Real-Time Exhaustive Pure Telemetry Repositories
     stats: {
-        home: { xg: 0, goals: 0, shots: 0, sot: 0, saves: 0, passes: 0, accuratePasses: 0, tackles: 0, interceptions: 0, fouls: 0, yellow: 0, red: 0, possTicks: 0 },
-        away: { xg: 0, goals: 0, shots: 0, sot: 0, saves: 0, passes: 0, accuratePasses: 0, tackles: 0, interceptions: 0, fouls: 0, yellow: 0, red: 0, possTicks: 0 },
+        home: { xg: 0, goals: 0, shots: 0, sot: 0, saves: 0, passes: 0, accuratePasses: 0, tackles: 0, interceptions: 0, fouls: 0, possTicks: 0 },
+        away: { xg: 0, goals: 0, shots: 0, sot: 0, saves: 0, passes: 0, accuratePasses: 0, tackles: 0, interceptions: 0, fouls: 0, possTicks: 0 },
         totalPossTicks: 0
     },
 
     init() {
         this.ctx = this.canvas.getContext('2d');
+        this.rollRandomTactics();
         this.populateLobbyView();
         this.registerHardwareListeners();
         requestAnimationFrame(() => this.executionLoop());
     },
 
+    rollRandomTactics() {
+        this.homeFormationIdx = Math.floor(Math.random() * FORMATION_REGISTRY.length);
+        this.awayFormationIdx = Math.floor(Math.random() * FORMATION_REGISTRY.length);
+        this.homeSquadIdx = Math.floor(Math.random() * SQUAD_REGISTRY.length);
+        do {
+            this.awaySquadIdx = Math.floor(Math.random() * SQUAD_REGISTRY.length);
+        } while (this.awaySquadIdx === this.homeSquadIdx);
+    },
+
     populateLobbyView() {
         const homeContainer = document.getElementById('home-team-list');
         const awayContainer = document.getElementById('away-team-list');
-        homeContainer.innerHTML = ''; awayContainer.innerHTML = '';
+        const formContainer = document.getElementById('formation-list');
+        
+        homeContainer.innerHTML = ''; awayContainer.innerHTML = ''; formContainer.innerHTML = '';
 
         SQUAD_REGISTRY.forEach((squad, idx) => {
             let hRow = document.createElement('div');
@@ -381,6 +434,19 @@ const Engine = {
             aRow.innerHTML = `<span>${squad.name}</span> <div class="status-dot" style="background:${squad.primary};"></div>`;
             aRow.onclick = () => { this.awaySquadIdx = idx; this.populateLobbyView(); };
             awayContainer.appendChild(aRow);
+        });
+
+        FORMATION_REGISTRY.forEach((form, idx) => {
+            let fRow = document.createElement('div');
+            let isCurrentSelection = (idx === this.homeFormationIdx);
+            fRow.className = `card-option ${isCurrentSelection ? 'selected' : ''}`;
+            fRow.innerHTML = `
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                    <span>${form.name}</span>
+                </div> 
+                <div class="status-dot" style="background:var(--ui-blue);"></div>`;
+            fRow.onclick = () => { this.homeFormationIdx = idx; this.populateLobbyView(); };
+            formContainer.appendChild(fRow);
         });
 
         document.getElementById('kickoff-trigger').onclick = () => {
@@ -399,19 +465,19 @@ const Engine = {
     registerHardwareListeners() {
         window.addEventListener('keydown', e => {
             this.inputKeys[e.code] = true;
-            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE'].includes(e.code)) e.preventDefault();
+            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE', 'KeyQ'].includes(e.code)) e.preventDefault();
         });
 
         window.addEventListener('keyup', e => {
             this.inputKeys[e.code] = false;
-            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE'].includes(e.code)) e.preventDefault();
+            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyE', 'KeyQ'].includes(e.code)) e.preventDefault();
         });
     },
 
     resetTelemetry() {
         this.stats = {
-            home: { xg: 0, goals: 0, shots: 0, sot: 0, saves: 0, passes: 0, accuratePasses: 0, tackles: 0, interceptions: 0, fouls: 0, yellow: 0, red: 0, possTicks: 0 },
-            away: { xg: 0, goals: 0, shots: 0, sot: 0, saves: 0, passes: 0, accuratePasses: 0, tackles: 0, interceptions: 0, fouls: 0, yellow: 0, red: 0, possTicks: 0 },
+            home: { xg: 0, goals: 0, shots: 0, sot: 0, saves: 0, passes: 0, accuratePasses: 0, tackles: 0, interceptions: 0, fouls: 0, possTicks: 0 },
+            away: { xg: 0, goals: 0, shots: 0, sot: 0, saves: 0, passes: 0, accuratePasses: 0, tackles: 0, interceptions: 0, fouls: 0, possTicks: 0 },
             totalPossTicks: 0
         };
     },
@@ -425,13 +491,14 @@ const Engine = {
         document.getElementById('match-header').classList.remove('hidden');
         document.getElementById('dashboard-gauges').classList.remove('hidden');
 
-        document.getElementById('home-badge').innerText = this.homeConfig.name;
+        document.getElementById('home-badge').innerText = `${this.homeConfig.name}`;
         document.getElementById('home-badge').style.color = this.homeConfig.primary;
-        document.getElementById('away-badge').innerText = this.awayConfig.name;
+        document.getElementById('away-badge').innerText = `${this.awayConfig.name}`;
         document.getElementById('away-badge').style.color = this.awayConfig.primary;
 
         this.scoreTracker = [0, 0];
-        this.timerFrames = 90 * 60; 
+        this.timeRemainingSeconds = this.matchDurationSeconds;
+        this.lastClockTimestamp = Date.now();
         this.staminaPool = 100;
         this.strikePower = 0;
         this.isChargingStrike = false;
@@ -442,10 +509,11 @@ const Engine = {
         this.resetTelemetry();
         this.buildFormations();
         this.synchronizeHudScores();
+        this.updateClockDisplay();
 
         this.isMatchActive = true;
         this.sequenceLockout = false;
-        SoundSynth.whistle();
+        this.triggerSystemCountdown();
     },
 
     buildFormations() {
@@ -454,38 +522,102 @@ const Engine = {
         this.ball.currentOwner = null;
         this.ball.freeFrames = 0;
         this.ball.ownerDuration = 0;
-        this.ball.hasBeenCounted = false;
+        this.ball.lastShotTeam = null;
+        this.ball.releasePower = 0;
+        this.ball.originDistanceToGoal = 0;
 
-        const xOffsets = [420, 260, 260, 140, 45];
-        const yOffsets = [340, 180, 500, 340, 340];
+        const homeForm = FORMATION_REGISTRY[this.homeFormationIdx];
+        const awayForm = FORMATION_REGISTRY[this.awayFormationIdx];
 
         this.homeTeamRoster = [];
         this.awayTeamRoster = [];
 
         for (let i = 0; i < 5; i++) {
             this.homeTeamRoster.push({
-                id: i, x: xOffsets[i], y: yOffsets[i], homeX: xOffsets[i], homeY: yOffsets[i],
-                radius: 16, type: i === 4 ? 'GK' : 'FIELD', team: 'HOME', config: this.homeConfig,
-                immunityTimer: 0, orientationAngle: 0, lastTackleFrame: 0
+                id: i, 
+                x: homeForm.xOffsets[i], 
+                y: homeForm.yOffsets[i], 
+                homeX: homeForm.xOffsets[i], 
+                homeY: homeForm.yOffsets[i],
+                radius: 16, 
+                type: i === 4 ? 'GK' : 'FIELD', 
+                role: homeForm.roleMap[i],
+                team: 'HOME', 
+                config: this.homeConfig,
+                immunityTimer: 0, 
+                orientationAngle: 0, 
+                lastTackleFrame: 0
             });
 
             this.awayTeamRoster.push({
-                id: i, x: 1024 - xOffsets[i], y: yOffsets[i], homeX: 1024 - xOffsets[i], homeY: yOffsets[i],
-                radius: 16, type: i === 4 ? 'GK' : 'FIELD', team: 'AWAY', config: this.awayConfig,
-                immunityTimer: 0, orientationAngle: Math.PI, lastTackleFrame: 0
+                id: i, 
+                x: 1024 - awayForm.xOffsets[i], 
+                y: awayForm.yOffsets[i], 
+                homeX: 1024 - awayForm.xOffsets[i], 
+                homeY: awayForm.yOffsets[i],
+                radius: 16, 
+                type: i === 4 ? 'GK' : 'FIELD', 
+                role: awayForm.roleMap[i],
+                team: 'AWAY', 
+                config: this.awayConfig,
+                immunityTimer: 0, 
+                orientationAngle: Math.PI, 
+                lastTackleFrame: 0
             });
         }
         this.controlledPlayer = this.homeTeamRoster[0];
     },
 
+    triggerSystemCountdown() {
+        this.isCountdownRunning = true;
+        this.countdownValue = 3;
+        this.countdownTimer = 0;
+
+        let el = document.getElementById('countdown-overlay');
+        el.innerText = this.countdownValue;
+        el.classList.add('pop-active');
+        SoundSynth.countdownBeep(false);
+        this.lastClockTimestamp = Date.now(); 
+    },
+
+    runCountdownCycle() {
+        if (!this.isCountdownRunning) return;
+
+        this.countdownTimer++;
+        if (this.countdownTimer >= 60) { 
+            this.countdownTimer = 0;
+            this.countdownValue--;
+
+            let el = document.getElementById('countdown-overlay');
+            if (this.countdownValue > 0) {
+                el.innerText = this.countdownValue;
+                SoundSynth.countdownBeep(false);
+                el.classList.remove('pop-active');
+                void el.offsetWidth;
+                el.classList.add('pop-active');
+            } else if (this.countdownValue === 0) {
+                el.innerText = "PLAY!";
+                SoundSynth.countdownBeep(true);
+                SoundSynth.whistle();
+                el.classList.remove('pop-active');
+                void el.offsetWidth;
+                el.classList.add('pop-active');
+            } else {
+                this.isCountdownRunning = false;
+                el.classList.remove('pop-active');
+                this.lastClockTimestamp = Date.now();
+            }
+        }
+    },
+
     processDeterministicPass() {
-        if (this.ball.currentOwner !== this.controlledPlayer) return;
+        if (this.ball.currentOwner !== this.controlledPlayer || this.isCountdownRunning) return;
 
         let passTarget = null;
         let highestProximity = 99999;
 
         this.homeTeamRoster.forEach(player => {
-            if (player === this.controlledPlayer || player.type === 'GK') return;
+            if (player === this.controlledPlayer) return; 
             let separation = Math.hypot(player.x - this.controlledPlayer.x, player.y - this.controlledPlayer.y);
             if (separation < highestProximity) {
                 highestProximity = separation;
@@ -501,21 +633,34 @@ const Engine = {
             
             this.ball.currentOwner = null;
             this.ball.ownerDuration = 0;
-            this.ball.vx = Math.cos(travelAngle) * 23; 
-            this.ball.vy = Math.sin(travelAngle) * 23;
-            this.ball.freeFrames = 12; 
-            this.ball.hasBeenCounted = false;
             
+            this.ball.vx = Math.cos(travelAngle) * 9; 
+            this.ball.vy = Math.sin(travelAngle) * 9;
+            this.ball.freeFrames = 5; 
             this.stats.home.accuratePasses++;
 
-            this.controlledPlayer.immunityTimer = 20;
-            this.controlledPlayer = passTarget;
+            this.controlledPlayer.immunityTimer = 10;
+            this.controlledPlayer = passTarget; 
         }
+    },
+
+    executeLongDistanceBoot() {
+        if (this.ball.currentOwner !== this.controlledPlayer || this.isCountdownRunning) return;
+        
+        SoundSynth.boot();
+        let forwardDirection = this.controlledPlayer.team === 'HOME' ? 1 : -1;
+        
+        this.ball.currentOwner = null;
+        this.ball.ownerDuration = 0;
+        this.ball.vx = forwardDirection * 25; 
+        this.ball.vy = (Math.random() - 0.5) * 6; 
+        this.ball.freeFrames = 15;
+        this.controlledPlayer.immunityTimer = 20;
     },
 
     verifyShotTrajectoryOnTarget(originX, originY, vx, vy, targetGoal) {
         if (vx === 0) return false;
-        let targetX = (targetGoal === 'AWAY') ? (1024 - 25) : 25;
+        let targetX = (targetGoal === 'AWAY') ? (1024 - 45) : 45;
         let timeToGoal = (targetX - originX) / vx;
         if (timeToGoal < 0) return false;
         
@@ -539,64 +684,51 @@ const Engine = {
         if (this.inputKeys['KeyS'] || this.inputKeys['ArrowDown']) netTargetY = 440;
 
         let strikeAngle = Math.atan2(netTargetY - this.ball.y, netTargetX - this.ball.x);
-        let absoluteVelocity = 16 + (this.strikePower * 18);
+        let absoluteVelocity = 12 + (this.strikePower * 14);
 
         let s_vx = Math.cos(strikeAngle) * absoluteVelocity;
         let s_vy = Math.sin(strikeAngle) * absoluteVelocity;
 
         let distanceToGoal = Math.hypot(1024 - this.ball.x, 340 - this.ball.y);
+        let calculatedXG = Math.min(0.85, Math.max(0.02, (320 / distanceToGoal) * 0.16));
         
-        // Exact Factual xG Calculations (Proximity Based Logarithmic Curve)
-        let calculatedXG = Math.min(0.78, Math.max(0.04, 1.0 - (distanceToGoal / 700)));
-        
-        // Deterministic Telemetry Lockout Guard
         this.stats.home.shots++;
         this.stats.home.xg += calculatedXG;
+        
+        this.ball.lastShotTeam = 'HOME';
+        this.ball.releasePower = this.strikePower; 
+        this.ball.originDistanceToGoal = distanceToGoal;
 
         let isOnTarget = this.verifyShotTrajectoryOnTarget(this.ball.x, this.ball.y, s_vx, s_vy, 'AWAY');
-        if (isOnTarget) {
-            this.stats.home.sot++;
-        }
+        if (isOnTarget) this.stats.home.sot++;
 
         this.ball.currentOwner = null;
         this.ball.ownerDuration = 0;
         this.ball.vx = s_vx;
         this.ball.vy = s_vy;
-        this.ball.freeFrames = 14;
-        this.ball.hasBeenCounted = false;
+        this.ball.freeFrames = 10;
 
-        this.controlledPlayer.immunityTimer = 25;
+        this.controlledPlayer.immunityTimer = 20;
         this.strikePower = 0;
         document.getElementById('kick-charge-thumb').style.width = '0%';
     },
 
     executePhysicalTackle(tackler, victim, isUltraPress = false) {
-        if (this.foulFreezeTimer > 0 || this.sequenceLockout) return;
+        if (this.foulFreezeTimer > 0 || this.sequenceLockout || this.isCountdownRunning) return;
 
-        let currentTick = this.timerFrames;
-        if (Math.abs(tackler.lastTackleFrame - currentTick) < 60) return; 
-        tackler.lastTackleFrame = currentTick;
-
-        let foulThreshold = isUltraPress ? 0.05 : 0.14; 
+        let foulThreshold = isUltraPress ? 0.02 : 0.04; 
         if (Math.random() < foulThreshold) {
             SoundSynth.foulSound();
-            this.foulFreezeTimer = 90; 
-            tackler.immunityTimer = 45;
+            this.foulFreezeTimer = 40; 
+            tackler.immunityTimer = 30;
             
             if (tackler.team === 'HOME') {
                 this.stats.home.fouls++;
-                let cardRoll = Math.random();
-                if (cardRoll > 0.90) { this.stats.home.red++; this.triggerFoulBanner("RED CARD!"); }
-                else if (cardRoll > 0.65) { this.stats.home.yellow++; this.triggerFoulBanner("YELLOW CARD"); }
-                else { this.triggerFoulBanner("FOUL COMMITTED"); }
+                this.triggerFoulBanner("FOUL COMMITTED");
             } else {
                 this.stats.away.fouls++;
-                let cardRoll = Math.random();
-                if (cardRoll > 0.90) { this.stats.away.red++; this.triggerFoulBanner("AI RED CARD!"); }
-                else if (cardRoll > 0.65) { this.stats.away.yellow++; this.triggerFoulBanner("AI YELLOW CARD"); }
-                else { this.triggerFoulBanner("AI FOUL"); }
+                this.triggerFoulBanner("AI CHALLENGE FOUL");
             }
-
             this.ball.currentOwner = victim;
             this.ball.vx = 0; this.ball.vy = 0;
             return;
@@ -614,7 +746,7 @@ const Engine = {
 
         this.ball.currentOwner = tackler;
         this.ball.ownerDuration = 0;
-        victim.immunityTimer = 40; 
+        victim.immunityTimer = 25; 
         tackler.immunityTimer = 10;
     },
 
@@ -622,36 +754,59 @@ const Engine = {
         let overlayBanner = document.getElementById('center-notif');
         overlayBanner.innerText = textString;
         overlayBanner.classList.add('trigger-pop');
-        setTimeout(() => overlayBanner.classList.remove('trigger-pop'), 1200);
+        setTimeout(() => overlayBanner.classList.remove('trigger-pop'), 1000);
     },
 
     evaluateGoalkeeperSaveChance(goalkeeper, velocityX) {
-        if (this.ball.hasBeenCounted) return; // Prevent double registration within animation frames
-        this.ball.hasBeenCounted = true;
+        // High scoring boost remains intact: 40% absolute chance to miss shot entirely
+        if (Math.random() > 0.60) {
+            this.ball.vx = velocityX * 0.99; 
+            return;
+        }
 
-        let tacticalConfig = STRATEGY_PROFILES[this.difficultyIdx];
-        let saveProbability = tacticalConfig.keeperSaveRate;
+        let computedSaveChance = 0.40; 
+        let currentPower = this.ball.releasePower;
+        let currentDistance = this.ball.originDistanceToGoal;
 
-        if (Math.random() <= saveProbability) {
+        if (currentPower >= 0.75) {
+            computedSaveChance = 0.30; 
+        } else if (currentPower <= 0.30) {
+            computedSaveChance = 0.55; 
+        } else {
+            computedSaveChance = 0.45; 
+        }
+
+        if (currentDistance > 320) {
+            computedSaveChance = 0.65; 
+        } else if (currentDistance <= 320) {
+            computedSaveChance = 0.35; 
+        }
+
+        if (Math.random() <= computedSaveChance) {
             SoundSynth.intercept();
-            if (goalkeeper.team === 'HOME') this.stats.home.saves++; else this.stats.away.saves++;
+            if (goalkeeper.team === 'HOME') this.stats.home.saves++;
+            else this.stats.away.saves++;
             
             this.ball.currentOwner = null;
             this.ball.ownerDuration = 0;
+            
             let reboundFactor = goalkeeper.team === 'HOME' ? 1 : -1;
-            this.ball.vx = reboundFactor * (8 + Math.random() * 5);
-            this.ball.vy = (Math.random() - 0.5) * 15;
-            this.ball.freeFrames = 15;
-            goalkeeper.immunityTimer = 35;
+            this.ball.vx = reboundFactor * (6 + Math.random() * 4);
+            this.ball.vy = (Math.random() - 0.5) * 10;
+            
+            this.ball.freeFrames = 20;
+            goalkeeper.immunityTimer = 40;
         } else {
-            this.ball.vx = velocityX * 0.92; 
+            this.ball.vx = velocityX * 0.96; 
         }
     },
 
     handleGoalCycle(scoringIndex) {
         this.sequenceLockout = true;
         this.scoreTracker[scoringIndex]++;
-        if (scoringIndex === 0) this.stats.home.goals++; else this.stats.away.goals++;
+        
+        if (scoringIndex === 0) this.stats.home.goals++;
+        else this.stats.away.goals++;
         
         this.synchronizeHudScores();
         SoundSynth.cheer();
@@ -662,17 +817,23 @@ const Engine = {
 
         setTimeout(() => {
             overlayBanner.classList.remove('trigger-pop');
-            if (this.timerFrames > 0) {
+            if (this.timeRemainingSeconds > 0) {
                 this.buildFormations();
                 this.sequenceLockout = false;
-                SoundSynth.whistle();
+                this.triggerSystemCountdown(); 
             }
-        }, 2000);
+        }, 1800);
     },
 
     synchronizeHudScores() {
         document.getElementById('score-readout').innerText = 
             `${this.scoreTracker[0].toString().padStart(2, '0')} - ${this.scoreTracker[1].toString().padStart(2, '0')}`;
+    },
+
+    updateClockDisplay() {
+        let displayMin = Math.floor(this.timeRemainingSeconds / 60).toString().padStart(2, '0');
+        let displaySec = (this.timeRemainingSeconds % 60).toString().padStart(2, '0');
+        document.getElementById('timer-box').innerText = `${displayMin}:${displaySec}`;
     },
 
     terminateMatchSession() {
@@ -690,65 +851,53 @@ const Engine = {
 
         document.getElementById('s-home-goals').innerText = this.stats.home.goals;
         document.getElementById('s-away-goals').innerText = this.stats.away.goals;
-
         document.getElementById('s-home-xg').innerText = this.stats.home.xg.toFixed(2);
         document.getElementById('s-away-xg').innerText = this.stats.away.xg.toFixed(2);
-        
-        document.getElementById('s-home-shots').innerText = this.stats.home.shots;
-        document.getElementById('s-away-shots').innerText = this.stats.away.shots;
-        
-        document.getElementById('s-home-sot').innerText = this.stats.home.sot;
-        document.getElementById('s-away-sot').innerText = this.stats.away.sot;
-        
+        document.getElementById('s-home-shots').innerText = Math.max(this.stats.home.goals, this.stats.home.shots);
+        document.getElementById('s-away-shots').innerText = Math.max(this.stats.away.goals, this.stats.away.shots);
+        document.getElementById('s-home-sot').innerText = Math.max(this.stats.home.goals, this.stats.home.sot);
+        document.getElementById('s-away-sot').innerText = Math.max(this.stats.away.goals, this.stats.away.sot);
         document.getElementById('s-home-saves').innerText = this.stats.home.saves;
         document.getElementById('s-away-saves').innerText = this.stats.away.saves;
-        
         document.getElementById('s-home-passes').innerText = this.stats.home.passes;
         document.getElementById('s-away-passes').innerText = this.stats.away.passes;
 
-        let hPassAcc = this.stats.home.passes > 0 ? Math.round((this.stats.home.accuratePasses / this.stats.home.passes) * 100) : 0;
-        let aPassAcc = this.stats.away.passes > 0 ? Math.round((this.stats.away.accuratePasses / this.stats.away.passes) * 100) : 0;
-        document.getElementById('s-home-passacc').innerText = `${hPassAcc}%`;
-        document.getElementById('s-away-passacc').innerText = `${aPassAcc}%`;
+        let totalTicks = this.stats.totalPossTicks > 0 ? this.stats.totalPossTicks : 1;
+        let hPoss = Math.round((this.stats.home.possTicks / totalTicks) * 100);
+        document.getElementById('s-home-poss').innerText = `${hPoss}%`;
+        document.getElementById('s-away-poss').innerText = `${100 - hPoss}%`;
 
         document.getElementById('s-home-tackles').innerText = this.stats.home.tackles;
         document.getElementById('s-away-tackles').innerText = this.stats.away.tackles;
-
         document.getElementById('s-home-intercepts').innerText = this.stats.home.interceptions;
         document.getElementById('s-away-intercepts').innerText = this.stats.away.interceptions;
-
         document.getElementById('s-home-fouls').innerText = this.stats.home.fouls;
         document.getElementById('s-away-fouls').innerText = this.stats.away.fouls;
-
-        document.getElementById('s-home-cards').innerText = `${this.stats.home.yellow}Y / ${this.stats.home.red}R`;
-        document.getElementById('s-away-cards').innerText = `${this.stats.away.yellow}Y / ${this.stats.away.red}R`;
-
-        let totalTicks = this.stats.totalPossTicks > 0 ? this.stats.totalPossTicks : 1;
-        let hPoss = Math.round((this.stats.home.possTicks / totalTicks) * 100);
-        let aPoss = 100 - hPoss;
-        document.getElementById('s-home-poss').innerText = `${hPoss}%`;
-        document.getElementById('s-away-poss').innerText = `${aPoss}%`;
     },
 
     computeEnginePhysics() {
         if (!this.isMatchActive || this.sequenceLockout) return;
+
+        if (this.isCountdownRunning) {
+            this.runCountdownCycle();
+            return; 
+        }
 
         if (this.foulFreezeTimer > 0) {
             this.foulFreezeTimer--;
             return;
         }
 
-        this.timerFrames--;
-        if (this.timerFrames % 60 === 0) {
-            let readableSeconds = Math.floor(this.timerFrames / 60);
-            let displayMin = Math.floor(readableSeconds / 60).toString().padStart(2, '0');
-            let displaySec = (readableSeconds % 60).toString().padStart(2, '0');
-            document.getElementById('timer-box').innerText = `${displayMin}:${displaySec}`;
-        }
+        let currentTimestamp = Date.now();
+        if (currentTimestamp - this.lastClockTimestamp >= 1000) {
+            this.timeRemainingSeconds--;
+            this.updateClockDisplay();
+            this.lastClockTimestamp += 1000;
 
-        if (this.timerFrames <= 0) {
-            this.terminateMatchSession();
-            return;
+            if (this.timeRemainingSeconds <= 0) {
+                this.terminateMatchSession();
+                return;
+            }
         }
 
         if (this.aiShotCooldownTimer > 0) this.aiShotCooldownTimer--;
@@ -756,28 +905,29 @@ const Engine = {
         let tacticalConfig = STRATEGY_PROFILES[this.difficultyIdx];
         if (this.ball.freeFrames > 0) this.ball.freeFrames--;
 
-        // Possession Metrics Matrix Accumulation
         this.stats.totalPossTicks++;
+        
+        let teamWithPossession = 'NONE';
         if (this.ball.currentOwner) {
+            teamWithPossession = this.ball.currentOwner.team;
             this.ball.ownerDuration++;
-            if (this.ball.currentOwner.team === 'HOME') this.stats.home.possTicks++;
+            if (teamWithPossession === 'HOME') this.stats.home.possTicks++;
             else this.stats.away.possTicks++;
         } else {
             this.ball.ownerDuration = 0;
             this.stats.home.possTicks += 0.5;
         }
 
-        let isUltraPressActive = (this.ball.ownerDuration > 180);
+        let isUltraPressActive = (this.ball.ownerDuration > 120 && this.difficultyIdx === 2);
 
-        // --- USER SPEED POLLING MATRIX ---
-        let operationalSpeed = 4.5;
+        let operationalSpeed = tacticalConfig.userSpeed;
         if (this.inputKeys['ShiftLeft']) {
             if (this.staminaPool > 1) {
-                operationalSpeed = 6.8;
-                this.staminaPool = Math.max(0, this.staminaPool - 0.45);
+                operationalSpeed = tacticalConfig.userSprint;
+                this.staminaPool = Math.max(0, this.staminaPool - 0.4);
             }
         } else {
-            this.staminaPool = Math.min(100, this.staminaPool + 0.35);
+            this.staminaPool = Math.min(100, this.staminaPool + 0.3);
         }
         document.getElementById('stamina-thumb').style.width = `${this.staminaPool}%`;
 
@@ -799,6 +949,11 @@ const Engine = {
             this.processDeterministicPass();
         }
 
+        if (this.inputKeys['KeyQ']) {
+            this.inputKeys['KeyQ'] = false;
+            this.executeLongDistanceBoot();
+        }
+
         if (this.inputKeys['Space']) {
             if (this.ball.currentOwner === this.controlledPlayer) {
                 this.isChargingStrike = true;
@@ -813,7 +968,6 @@ const Engine = {
             this.spacePressedLastFrame = false;
         }
 
-        // --- POSITION COLLISION EVALUATOR ---
         let completeSquadList = [...this.homeTeamRoster, ...this.awayTeamRoster];
         
         let closestAnyPlayer = null;
@@ -827,10 +981,9 @@ const Engine = {
             completeSquadList.forEach(player => {
                 if (player.immunityTimer > 0) return;
                 let proximityDist = Math.hypot(player.x - this.ball.x, player.y - this.ball.y);
-                if (proximityDist < player.radius + this.ball.radius + 2) {
+                if (proximityDist < player.radius + this.ball.radius + 3) {
                     this.ball.currentOwner = player;
                     this.ball.ownerDuration = 0;
-                    this.ball.hasBeenCounted = false;
                     if (player.team === 'HOME') this.controlledPlayer = player;
                 }
             });
@@ -845,7 +998,7 @@ const Engine = {
             completeSquadList.forEach(player => {
                 if (player.team !== activeCarrier.team && player.immunityTimer <= 0) {
                     let distanceToCarrier = Math.hypot(player.x - activeCarrier.x, player.y - activeCarrier.y);
-                    let requiredRadius = player.radius + activeCarrier.radius + (isUltraPressActive ? 5 : 1);
+                    let requiredRadius = player.radius + activeCarrier.radius + 2;
                     if (distanceToCarrier < requiredRadius) {
                         this.executePhysicalTackle(player, activeCarrier, isUltraPressActive);
                     }
@@ -854,7 +1007,7 @@ const Engine = {
         } else {
             this.ball.x += this.ball.vx;
             this.ball.y += this.ball.vy;
-            this.ball.vx *= 0.980; this.ball.vy *= 0.980;
+            this.ball.vx *= 0.98; this.ball.vy *= 0.98;
         }
 
         if (this.ball.currentOwner === null || this.ball.currentOwner.team === 'AWAY') {
@@ -871,54 +1024,47 @@ const Engine = {
             this.controlledPlayer = potentialSelection;
         }
 
-        // --- HOME OUTFIELD AI DEFENSIVE ALIGNMENT ---
+        // --- USER FIELD POSITION MANAGEMENT ---
         this.homeTeamRoster.forEach(player => {
             if (player.immunityTimer > 0) player.immunityTimer--;
             if (player === this.controlledPlayer) return;
 
             if (player.type === 'GK') {
                 player.x = 45;
-                player.y += (Math.max(220, Math.min(460, this.ball.y)) - player.y) * 0.25;
+                player.y += (Math.max(220, Math.min(460, this.ball.y)) - player.y) * 0.20;
                 if (this.ball.currentOwner === player) {
                     let clearTarget = this.homeTeamRoster.find(p => p !== player && p.type !== 'GK');
                     let launchAngle = Math.atan2(clearTarget.y - player.y, clearTarget.x - player.x);
                     SoundSynth.strike();
                     this.ball.currentOwner = null;
-                    this.ball.ownerDuration = 0;
-                    this.ball.vx = Math.cos(launchAngle) * 19;
-                    this.ball.vy = Math.sin(launchAngle) * 19;
-                    this.ball.freeFrames = 15;
-                    this.ball.hasBeenCounted = false;
-                    player.immunityTimer = 30;
+                    this.ball.vx = Math.cos(launchAngle) * 7; this.ball.vy = Math.sin(launchAngle) * 7;
+                    this.ball.freeFrames = 12;
                     this.controlledPlayer = clearTarget;
                 }
                 return;
             }
 
-            if (this.ball.currentOwner === null && closestAnyPlayer === player) {
-                let chaseAngle = Math.atan2(this.ball.y - player.y, this.ball.x - player.x);
-                player.x += Math.cos(chaseAngle) * 4.0;
-                player.y += Math.sin(chaseAngle) * 4.0;
-                player.orientationAngle = chaseAngle;
-                return;
-            }
-
-            if (this.ball.currentOwner && this.ball.currentOwner.team === 'HOME') {
-                let spaceTargetX = this.ball.x + (player.homeX - 400) * 0.5 + 90;
-                let spaceTargetY = player.homeY + (this.ball.y - player.homeY) * 0.35;
-                player.x += (spaceTargetX - player.x) * 0.05;
-                player.y += (spaceTargetY - player.y) * 0.05;
-                player.orientationAngle = Math.atan2(this.ball.y - player.y, this.ball.x - player.x);
+            if (teamWithPossession === 'HOME') {
+                let spaceTargetX = player.homeX + (this.ball.x - 200) * 0.25;
+                let spaceTargetY = player.homeY;
+                player.x += (spaceTargetX - player.x) * 0.08;
+                player.y += (spaceTargetY - player.y) * 0.08;
             } else {
-                let runToTargetX = player.homeX + (this.ball.x - 512) * 0.45;
-                let runToTargetY = player.homeY + (this.ball.y - player.homeY) * 0.45;
-                player.x += (runToTargetX - player.x) * 0.06;
-                player.y += (runToTargetY - player.y) * 0.06;
-                player.orientationAngle = Math.atan2(this.ball.y - player.y, this.ball.x - player.x);
+                if (closestAnyPlayer === player && this.ball.currentOwner === null) {
+                    let chaseAngle = Math.atan2(this.ball.y - player.y, this.ball.x - player.x);
+                    player.x += Math.cos(chaseAngle) * tacticalConfig.userSpeed;
+                    player.y += Math.sin(chaseAngle) * tacticalConfig.userSpeed;
+                } else {
+                    let fluidZoneX = (this.ball.x * 0.4) + (player.homeX * 0.6);
+                    let fluidZoneY = (this.ball.y * 0.3) + (player.homeY * 0.7);
+                    player.x += (fluidZoneX - player.x) * 0.05;
+                    player.y += (fluidZoneY - player.y) * 0.05;
+                }
             }
+            player.orientationAngle = Math.atan2(this.ball.y - player.y, this.ball.x - player.x);
         });
 
-        // --- OPPOSITION ADAPTIVE PRO ARCHITECTURE ---
+        // --- ANTI-SWARM AI LOGIC CORE ---
         let primaryAwayChaser = null;
         let lowestAwayDistance = 99999;
         this.awayTeamRoster.forEach(player => {
@@ -932,98 +1078,81 @@ const Engine = {
 
             if (player.type === 'GK') {
                 player.x = 1024 - 45;
-                player.y += (Math.max(220, Math.min(460, this.ball.y)) - player.y) * 0.25;
+                player.y += (Math.max(220, Math.min(460, this.ball.y)) - player.y) * 0.20; 
                 if (this.ball.currentOwner === player) {
                     let clearTarget = this.awayTeamRoster.find(p => p !== player && p.type !== 'GK');
                     let launchAngle = Math.atan2(clearTarget.y - player.y, clearTarget.x - player.x);
                     SoundSynth.strike();
                     this.ball.currentOwner = null;
-                    this.ball.ownerDuration = 0;
-                    this.ball.vx = Math.cos(launchAngle) * 19;
-                    this.ball.vy = Math.sin(launchAngle) * 19;
-                    this.ball.freeFrames = 15;
-                    this.ball.hasBeenCounted = false;
-                    player.immunityTimer = 30;
+                    this.ball.vx = Math.cos(launchAngle) * 12; this.ball.vy = Math.sin(launchAngle) * 12;
+                    this.ball.freeFrames = 12;
                 }
                 return;
             }
 
             let activeSpeedRate = tacticalConfig.aiSpeed;
             if (this.difficultyIdx === 2) {
-                if (isUltraPressActive) {
-                    activeSpeedRate = tacticalConfig.maxBurstSpeed; 
-                } else if (this.ball.currentOwner === null && lowestAwayDistance < 220 && player === primaryAwayChaser) {
+                if (isUltraPressActive || (player === primaryAwayChaser && lowestAwayDistance < 180)) {
                     activeSpeedRate = tacticalConfig.maxBurstSpeed; 
                 }
             }
 
-            if (this.ball.currentOwner === null && closestAnyPlayer === player) {
-                let chaseAngle = Math.atan2(this.ball.y - player.y, this.ball.x - player.x);
-                player.x += Math.cos(chaseAngle) * activeSpeedRate;
-                player.y += Math.sin(chaseAngle) * activeSpeedRate;
-                player.orientationAngle = chaseAngle;
-                return;
-            }
-
             if (this.ball.currentOwner === player) {
-                let attackingGoalX = 30;
-                let attackingGoalY = 340;
+                let attackingGoalX = 35;
+                let attackingGoalY = 340 + (Math.sin(Date.now() * 0.002) * 60);
                 let attackAngle = Math.atan2(attackingGoalY - player.y, attackingGoalX - player.x);
                 
                 player.x += Math.cos(attackAngle) * activeSpeedRate;
                 player.y += Math.sin(attackAngle) * activeSpeedRate;
                 player.orientationAngle = attackAngle;
 
-                let spatialRangeToNet = Math.hypot(player.x - attackingGoalX, player.y - attackingGoalY);
+                let spatialRangeToNet = Math.hypot(player.x - attackingGoalX, player.y - 340);
                 if (spatialRangeToNet < tacticalConfig.shootRange && this.aiShotCooldownTimer === 0) {
                     SoundSynth.strike();
                     this.aiShotCooldownTimer = tacticalConfig.aiShotCooldown; 
 
-                    let ai_vx = Math.cos(attackAngle) * 19;
-                    let ai_vy = Math.sin(attackAngle) * 19;
+                    let ai_vx = Math.cos(attackAngle) * 11.5; // Softened AI shot baseline velocity
+                    let ai_vy = Math.sin(attackAngle) * 11.5;
 
-                    let distanceToGoal = Math.hypot(this.ball.x - 30, 340 - this.ball.y);
-                    let calculatedXG = Math.min(0.78, Math.max(0.04, 1.0 - (distanceToGoal / 700)));
-                    
                     this.stats.away.shots++;
-                    this.stats.away.xg += calculatedXG;
+                    this.stats.away.xg += 0.12;
+                    
+                    this.ball.lastShotTeam = 'AWAY';
+                    this.ball.releasePower = 0.35; 
+                    this.ball.originDistanceToGoal = spatialRangeToNet;
 
-                    let isOnTarget = this.verifyShotTrajectoryOnTarget(this.ball.x, this.ball.y, ai_vx, ai_vy, 'HOME');
-                    if (isOnTarget) {
+                    if (this.verifyShotTrajectoryOnTarget(this.ball.x, this.ball.y, ai_vx, ai_vy, 'HOME')) {
                         this.stats.away.sot++;
                     }
 
                     this.ball.currentOwner = null;
-                    this.ball.ownerDuration = 0;
-                    this.ball.vx = ai_vx;
-                    this.ball.vy = ai_vy;
-                    this.ball.freeFrames = 15;
-                    this.ball.hasBeenCounted = false;
-                    player.immunityTimer = 40;
+                    this.ball.vx = ai_vx; this.ball.vy = ai_vy;
+                    this.ball.freeFrames = 12;
+                    player.immunityTimer = 35;
                 }
             } else {
-                if (this.ball.currentOwner && this.ball.currentOwner.team === 'HOME') {
-                    if (isUltraPressActive && Math.hypot(player.x - this.ball.x, player.y - this.ball.y) < 380) {
-                        let pressAngle = Math.atan2(this.ball.y - player.y, this.ball.x - player.x);
-                        player.x += Math.cos(pressAngle) * activeSpeedRate;
-                        player.y += Math.sin(pressAngle) * activeSpeedRate;
-                        player.orientationAngle = pressAngle;
-                    } else if (player === primaryAwayChaser && lowestAwayDistance < tacticalConfig.interceptDist) {
-                        let pressAngle = Math.atan2(this.ball.y - player.y, this.ball.x - player.x);
-                        player.x += Math.cos(pressAngle) * activeSpeedRate;
-                        player.y += Math.sin(pressAngle) * activeSpeedRate;
-                        player.orientationAngle = pressAngle;
+                // FIXED SWARM LOGIC: AI field players now aggressively respect spatial zones. 
+                // Only the designated primary away chaser hunts the ball down tightly.
+                if (teamWithPossession === 'HOME' || teamWithPossession === 'NONE') {
+                    let separatingGap = Math.hypot(player.x - this.ball.x, player.y - this.ball.y);
+                    
+                    if (player === primaryAwayChaser || separatingGap < tacticalConfig.interceptDist) {
+                        let clampAngle = Math.atan2(this.ball.y - player.y, this.ball.x - player.x);
+                        player.x += Math.cos(clampAngle) * activeSpeedRate;
+                        player.y += Math.sin(clampAngle) * activeSpeedRate;
                     } else {
-                        let channelReturnX = player.homeX + (this.ball.x - 512) * 0.28;
-                        player.x += (channelReturnX - player.x) * 0.04;
-                        player.y += (player.homeY - player.y) * 0.04;
-                        player.orientationAngle = Math.atan2(this.ball.y - player.y, this.ball.x - player.x);
+                        // Maintain dynamic block spacing instead of dog-piling
+                        let blockTargetX = Math.max(480, (this.ball.x * 0.3) + (player.homeX * 0.7));
+                        let blockTargetY = (this.ball.y * 0.25) + (player.homeY * 0.75);
+                        player.x += (blockTargetX - player.x) * 0.06;
+                        player.y += (blockTargetY - player.y) * 0.06;
                     }
                 } else {
-                    let fallbackTraceX = this.ball.x + (player.homeX - 512) * 0.55;
-                    player.x += (fallbackTraceX - player.x) * 0.05;
-                    player.y += (this.ball.y - player.y) * 0.04;
+                    let spatialOffset = player.homeX - (512 - this.ball.x) * 0.12;
+                    player.x += (spatialOffset - player.x) * 0.06;
+                    player.y += (player.homeY - player.y) * 0.06;
                 }
+                player.orientationAngle = Math.atan2(this.ball.y - player.y, this.ball.x - player.x);
             }
         });
 
@@ -1037,7 +1166,6 @@ const Engine = {
             this.ball.y = this.ball.y < 28 ? 28 : 680 - 28;
         }
 
-        // --- GOALKEEPER INTERCEPT DETECTORS ---
         if (this.ball.vx < 0 && this.ball.x < 75 && this.ball.x > 35 && this.ball.y > 220 && this.ball.y < 460) {
             let homeKeeperNode = this.homeTeamRoster[4];
             if (homeKeeperNode.immunityTimer <= 0 && this.ball.freeFrames === 0) {
@@ -1071,7 +1199,7 @@ const Engine = {
             this.ctx.fillRect(i * pitchInterval, 0, pitchInterval, 680);
         }
 
-        this.ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+        this.ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
         this.ctx.lineWidth = 3;
         this.ctx.strokeRect(25, 25, 1024 - 50, 680 - 50);
 
@@ -1113,6 +1241,11 @@ const Engine = {
             this.ctx.beginPath(); this.ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2); this.ctx.fill();
             this.ctx.strokeStyle = player.config.secondary;
             this.ctx.lineWidth = 2; this.ctx.stroke();
+
+            this.ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            this.ctx.font = '9px Montserrat';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(player.role, player.x, player.y - 20);
 
             let vectorHeadX = player.x + Math.cos(player.orientationAngle) * 4;
             let vectorHeadY = player.y + Math.sin(player.orientationAngle) * 4;
