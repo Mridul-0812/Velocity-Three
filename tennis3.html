@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HYPERION TENNIS PRO | VER 5.0 ENGINE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-pink: #ff0055;
+            --court-green: #040d0a;
+            --ball-yellow: #ccff00;
+            --panel-border: rgba(0, 242, 255, 0.2);
+            --scanlines: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            background: #010304;
+            color: #fff;
+            font-family: 'Share Tech Mono', monospace;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .shake-active {
+            animation: terminal-vibe 0.3s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes terminal-vibe {
+            10%, 90% { transform: translate3d(-3px, 0, 0); }
+            20%, 80% { transform: translate3d(5px, -3px, 0); }
+            30%, 50%, 70% { transform: translate3d(-7px, 5px, 0); }
+            40%, 60% { transform: translate3d(7px, -5px, 0); }
+        }
+
+        #workspace-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 1100px;
+            height: 100vh;
+        }
+
+        .crt-layer::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: var(--scanlines);
+            background-size: 100% 4px, 6px 100%;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0.55;
+        }
+
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 1000px;
+            height: 85px;
+            z-index: 5;
+        }
+
+        .title-block h1 {
+            font-family: 'Orbitron';
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            margin: 0;
+            background: linear-gradient(135deg, #fff, #00f2ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+        }
+        .title-block span {
+            font-size: 11px;
+            color: #3b574e;
+            letter-spacing: 3px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .scoreboard-center {
+            background: rgba(3, 7, 6, 0.9);
+            border: 2px solid var(--panel-border);
+            border-top: 4px solid var(--neon-blue);
+            border-radius: 6px;
+            width: 440px;
+            padding: 6px 20px;
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.15);
+            backdrop-filter: blur(6px);
+        }
+
+        .score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 3px 0;
+        }
+
+        .score-player {
+            font-family: 'Orbitron';
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .score-digits {
+            font-family: 'Orbitron';
+            font-size: 22px;
+            font-weight: 900;
+            color: var(--ball-yellow);
+            text-shadow: 0 0 10px rgba(204, 255, 0, 0.5);
+        }
+
+        .fault-indicator {
+            font-family: 'Orbitron';
+            font-size: 11px;
+            color: var(--neon-pink);
+            text-align: center;
+            font-weight: 700;
+            min-height: 15px;
+            letter-spacing: 1px;
+        }
+
+        .match-stats-right {
+            background: rgba(3, 7, 6, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 10px 20px;
+            border-radius: 6px;
+            width: 260px;
+            text-align: right;
+        }
+        .stats-text {
+            font-family: 'Orbitron';
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #c4d4cf;
+        }
+
+        .viewport-wrapper {
+            position: relative;
+            width: 1000px;
+            height: 650px;
+        }
+
+        canvas {
+            background: var(--court-green);
+            border: 4px solid #0d1a16;
+            box-shadow: 0 0 45px rgba(0, 0, 0, 0.9);
+            display: block;
+            border-radius: 6px;
+        }
+
+        .announcer-text {
+            position: absolute;
+            top: 35%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron';
+            font-size: 60px;
+            font-weight: 900;
+            letter-spacing: 5px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.1s ease-out;
+            text-shadow: 0 0 25px currentColor, 0 0 40px #000;
+            z-index: 90;
+            text-align: center;
+            width: 100%;
+        }
+
+        .controls-hint-footer {
+            width: 1000px;
+            background: rgba(3, 7, 6, 0.9);
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #5d786e;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            justify-content: space-between;
+            box-sizing: border-box;
+        }
+        .controls-hint-footer span {
+            color: var(--neon-blue);
+            font-weight: 700;
+        }
+
+        /* HARDWARE MENU PROTOCOL OVERLAY SCREEN */
+        #menu-overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, #06181b 0%, #010304 100%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .menu-title {
+            font-family: 'Orbitron';
+            font-size: 54px;
+            font-weight: 900;
+            letter-spacing: 6px;
+            margin: 0;
+            background: linear-gradient(to right, #fff, var(--ball-yellow), var(--neon-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 20px rgba(0, 242, 255, 0.25));
+        }
+
+        .config-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .config-label {
+            font-family: 'Orbitron';
+            font-size: 11px;
+            letter-spacing: 3px;
+            color: #4a6f7d;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .radio-group label {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            padding: 10px 20px;
+            font-family: 'Orbitron';
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            color: #92a7bf;
+        }
+
+        .radio-group input {
+            display: none;
+        }
+
+        .radio-group input:checked + label {
+            background: rgba(0, 242, 255, 0.08);
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.25);
+        }
+
+        /* COIN FLIP SCREEN */
+        #coin-container {
+            position: absolute;
+            inset: 0;
+            background: #020506;
+            z-index: 1005;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron';
+        }
+
+        /* TELEMETRY OVERLAY DATA DISPLAY */
+        #stats-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(1, 3, 2, 0.98);
+            z-index: 999;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Orbitron';
+        }
+
+        .stats-card {
+            background: #020705;
+            border: 2px solid rgba(0, 242, 255, 0.25);
+            border-radius: 8px;
+            padding: 35px;
+            width: 550px;
+            box-shadow: 0 0 50px rgba(0, 242, 255, 0.15);
+        }
+
+        .stats-header {
+            text-align: center;
+            font-size: 26px;
+            font-weight: 900;
+            color: var(--ball-yellow);
+            margin-bottom: 25px;
+            letter-spacing: 2px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding-bottom: 12px;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 14px 0;
+            font-size: 13px;
+        }
+
+        .btn {
+            background: transparent;
+            border: 2px solid var(--ball-yellow);
+            color: var(--ball-yellow);
+            padding: 14px 35px;
+            font-family: 'Orbitron';
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 2px;
+            border-radius: 4px;
+            text-decoration: none;
+            margin-top: 15px;
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .btn:hover {
+            background: var(--ball-yellow);
+            color: #000;
+            box-shadow: 0 0 25px rgba(204, 255, 0, 0.4);
+        }
+    </style>
+</head>
+<body class="crt-layer">
+
+<div id="menu-overlay">
+    <h1 class="menu-title">HYPERION ENG-5</h1>
+    <div style="font-size: 11px; letter-spacing: 5px; color: #435e55; text-transform: uppercase; margin-bottom: 15px;">Advanced Analytics Core</div>
+    
+    <div class="config-section">
+        <span class="config-label">AI Difficulty Rating</span>
+        <div class="radio-group">
+            <input type="radio" id="diff-easy" name="difficulty" value="EASY">
+            <label for="diff-easy">EASY ENGINE</label>
+            <input type="radio" id="diff-medium" name="difficulty" value="MEDIUM" checked>
+            <label for="diff-medium">PRO BALANCED</label>
+            <input type="radio" id="diff-hard" name="difficulty" value="HARD">
+            <label for="diff-hard">ELITE WALL</label>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <span class="config-label">Set Length Matrix</span>
+        <div class="radio-group">
+            <input type="radio" id="set-1g" name="setLength" value="1G">
+            <label for="set-1g">1-GAME COIN TOSS</label>
+            <input type="radio" id="set-2g" name="setLength" value="2G">
+            <label for="set-2g">2-GAME MINI SET</label>
+            <input type="radio" id="set-6g" name="setLength" value="6G" checked>
+            <label for="set-6g">6/7 GAME STANDARD</label>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <span class="config-label">Deuce System Protocol</span>
+        <div class="radio-group">
+            <input type="radio" id="deuce-long" name="deuceMode" value="ADVANTAGE" checked>
+            <label for="deuce-long">ADVANTAGE DEUCE</label>
+            <input type="radio" id="deuce-short" name="deuceMode" value="SUDDEN_DEATH">
+            <label for="deuce-short">SUDDEN DEATH</label>
+        </div>
+    </div>
+
+    <div class="config-section">
+        <span class="config-label">Match Duration Length</span>
+        <div class="radio-group">
+            <input type="radio" id="len-1" name="matchLength" value="1" checked>
+            <label for="len-1">1 SET MATCH</label>
+            <input type="radio" id="len-3" name="matchLength" value="3">
+            <label for="len-3">3 SETS FULL</label>
+            <input type="radio" id="len-5" name="matchLength" value="5">
+            <label for="len-5">5 SETS FULL-MEN'S</label>
+        </div>
+    </div>
+
+    <div style="width: 350px; margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+        <button class="btn" onclick="Game.configureMatchSetup()">BOOT SYSTEM TERMINAL</button>
+        <a href="tennis4.html" class="btn" style="border-color: var(--neon-blue); color: var(--neon-blue); text-align: center; text-decoration: none; box-sizing: border-box;">LOAD VER 5.0 ENGINE</a>
+    </div>
+</div>
+
+<div id="coin-container">
+    <div style="font-size: 14px; letter-spacing: 4px; color: #4a6f7d; margin-bottom: 25px;">EXECUTING RANDOM SELECTION PROTOCOL</div>
+    <canvas id="coinCanvas" width="300" height="300"></canvas>
+    <div id="coin-winner-announcement" style="font-size: 24px; font-weight: 900; color: #ccff00; margin-top: 25px; height: 30px; letter-spacing: 2px;"></div>
+</div>
+
+<div id="stats-overlay">
+    <div class="stats-card">
+        <div class="stats-header" id="modal-title">SET CONCLUDED</div>
+        <div class="stats-row" style="color: #4a6f7d; font-weight: 700; font-size: 11px;">
+            <span>TELEMETRY METRICS</span>
+            <span>PLAYER</span>
+            <span>AI CORE</span>
+        </div>
+        <hr style="border:0; border-top:1px dashed rgba(0, 242, 255, 0.2)">
+        <div class="stats-row">
+            <span>GAMES CONCLUDED:</span>
+            <span id="stat-games-p" style="color:var(--neon-blue); font-weight:900;">0</span>
+            <span id="stat-games-a" style="color:var(--neon-pink); font-weight:900;">0</span>
+        </div>
+        <div class="stats-row">
+            <span>TOTAL POINTS RECORDED:</span>
+            <span id="stat-pts-p" class="stats-val">0</span>
+            <span id="stat-pts-a" class="stats-val">0</span>
+        </div>
+        <div class="stats-row" style="border-top:1px solid rgba(0,242,255,0.15); padding-top:12px; margin-top:15px;">
+            <span>TOURNAMENT STANDINGS SCOREBOARD:</span>
+            <span id="stat-match-sets" style="color:var(--ball-yellow); font-weight:900;">0 - 0 Sets</span>
+        </div>
+        <button class="btn" id="modal-continue-btn" onclick="Game.dismissStatsModal()">DISPATCH NEXT SYSTEM SET</button>
+    </div>
+</div>
+
+<div id="workspace-container">
+    <div class="hud-header">
+        <div class="title-block">
+            <h1>HYPERION CORE</h1>
+            <span id="engine-mode-status">SYSTEM LOADED</span>
+        </div>
+
+        <div class="scoreboard-center" id="hud-scorebox">
+            <div class="score-row">
+                <span class="score-player" style="color: var(--neon-blue);">PLAYER (YOU)</span>
+                <span id="player-points" class="score-digits">LOVE</span>
+            </div>
+            <div class="score-row" style="border-top: 1px solid rgba(0,242,255,0.08); padding-top: 4px; margin-top: 4px;">
+                <span class="score-player" style="color: var(--neon-pink);">AI OPPONENT</span>
+                <span id="ai-points" class="score-digits">LOVE</span>
+            </div>
+            <div id="fault-banner" class="fault-indicator"></div>
+        </div>
+
+        <div class="match-stats-right">
+            <div id="sets-summary" class="stats-text">SETS: 0 - 0 | GAMES: 0 - 0</div>
+            <div id="rally-counter" style="font-size: 11px; color: #ccff00; margin-top: 2px; font-weight: 700;">RALLY STREAK: 0</div>
+        </div>
+    </div>
+
+    <div class="viewport-wrapper" id="shake-node">
+        <div id="announcer" class="announcer-text">READY</div>
+        <canvas id="tennisCanvas"></canvas>
+    </div>
+
+    <div class="controls-hint-footer">
+        <div><span>ARROWS:</span> Move Node &bull; <span>SPACE:</span> Flat Drive / Serve &bull; <span>X:</span> Topspin &bull; <span>Z:</span> Slice &bull; <span>C:</span> Drop Shot &bull; <span>V:</span> Smash</div>
+        <div id="anti-spam-status" style="color: #ff0055; font-weight: 700; letter-spacing: 1px;">SPAM DETECTION: NOMINAL</div>
+    </div>
+</div>
+
+<script>
+const Game = {
+    canvas: document.getElementById('tennisCanvas'),
+    ctx: null,
+    width: 1000,
+    height: 650,
+    isRunning: false,
+    pointAwarded: false,
+    rallyCount: 0,
+    isPowerShotActive: false,
+    serveTimer: null,
+    serveDebounce: false, // Prevents the double-spacebar bug
+
+    // Match Architectures
+    difficulty: "MEDIUM",
+    setLength: "6G", 
+    deuceMode: "ADVANTAGE",
+    maxSetsToWin: 1,
+    currentServer: 'player',
+    isTiebreak: false,
+
+    // Anti-Spam Tracking Registries
+    playerPowerStreak: 0,
+    aiEnforcedSmashQueued: false,
+
+    memoryHistory: {
+        setScores: [],
+        currentSet: { playerPointsWon: 0, aiPointsWon: 0 }
+    },
+
+    score: {
+        player: 0, ai: 0,
+        gamesP: 0, gamesA: 0,
+        setsP: 0, setsA: 0,
+        pointsMap: ["LOVE", "15", "30", "40", "AD"]
+    },
+
+    serveAttempt: 1,
+    gravity: 0.22,
+    friction: 0.995,
+    netY: 325,
+    netHeight: 22,
+
+    ball: {
+        x: 500, y: 550, z: 0,
+        vx: 0, vy: 0, vz: 0,
+        radius: 7, active: false,
+        lastHitBy: null, bounceState: 'AIRBORNE',
+        isServe: false, isTossed: false, spinX: 0,
+        trail: [], maxTrail: 16
+    },
+
+    player: { x: 500, y: 580, w: 90, h: 12, speed: 8.5, color: '#00f2ff' },
+    ai: { x: 500, y: 70, w: 90, h: 12, speed: 6.0, targetX: 500, vx: 0, decisionTimer: 0, reactionInterval: 10 },
+
+    keys: {},
+
+    configureMatchSetup() {
+        this.difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+        this.setLength = document.querySelector('input[name="setLength"]:checked').value;
+        this.deuceMode = document.querySelector('input[name="deuceMode"]:checked').value;
+        const lengthVal = parseInt(document.querySelector('input[name="matchLength"]:checked').value);
+
+        this.maxSetsToWin = lengthVal === 1 ? 1 : (lengthVal === 3 ? 2 : 3);
+
+        if (this.setLength === "1G") {
+            this.executeCoinTossSequence();
+        } else {
+            this.initialiseMainGameInterface();
+        }
+    },
+
+    executeCoinTossSequence() {
+        document.getElementById('menu-overlay').style.display = 'none';
+        const container = document.getElementById('coin-container');
+        container.style.display = 'flex';
+
+        const cCanvas = document.getElementById('coinCanvas');
+        const cCtx = cCanvas.getContext('2d');
+        
+        let angle = 0;
+        let speed = 0.4;
+        let frames = 0;
+        const maxFrames = 90;
+        
+        const roll = Math.random();
+        const winnerText = roll > 0.5 ? "HUMAN" : "AI";
+
+        function animateCoin() {
+            cCtx.clearRect(0, 0, 300, 300);
+            cCtx.save();
+            cCtx.translate(150, 150);
+            
+            let scaleX = Math.abs(Math.cos(angle));
+            cCtx.scale(scaleX, 1);
+
+            // Draw Cyber Coin Base Outer Frame
+            cCtx.strokeStyle = '#00f2ff';
+            cCtx.lineWidth = 6;
+            cCtx.fillStyle = '#051417';
+            cCtx.beginPath();
+            cCtx.arc(0, 0, 90, 0, Math.PI * 2);
+            cCtx.fill();
+            cCtx.stroke();
+
+            // Interior Ring Accentuation
+            cCtx.strokeStyle = '#ccff00';
+            cCtx.lineWidth = 2;
+            cCtx.beginPath();
+            cCtx.arc(0, 0, 75, 0, Math.PI * 2);
+            cCtx.stroke();
+
+            // Face Font Output Elements
+            cCtx.fillStyle = '#fff';
+            cCtx.font = 'black 22px Orbitron';
+            cCtx.textAlign = 'center';
+            cCtx.textBaseline = 'middle';
+            
+            let normalAngle = (angle % (Math.PI * 2));
+            if (normalAngle > Math.PI / 2 && normalAngle < (3 * Math.PI) / 2) {
+                cCtx.fillText('AI', 0, 0);
+            } else {
+                cCtx.fillText('HUMAN', 0, 0);
+            }
+
+            cCtx.restore();
+            
+            angle += speed;
+            speed *= 0.985; 
+            frames++;
+
+            if (frames < maxFrames || speed > 0.02) {
+                requestAnimationFrame(animateCoin);
+            } else {
+                cCtx.clearRect(0, 0, 300, 300);
+                cCtx.save();
+                cCtx.translate(150, 150);
+                cCtx.strokeStyle = winnerText === "HUMAN" ? '#00f2ff' : '#ff0055';
+                cCtx.lineWidth = 8;
+                cCtx.fillStyle = '#051417';
+                cCtx.beginPath(); cCtx.arc(0, 0, 90, 0, Math.PI * 2); cCtx.fill(); cCtx.stroke();
+                cCtx.fillStyle = '#fff';
+                cCtx.font = 'bold 24px Orbitron';
+                cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
+                cCtx.fillText(winnerText, 0, 0);
+                cCtx.restore();
+
+                document.getElementById('coin-winner-announcement').innerText = `${winnerText} WINS THE SERVE`;
+                
+                setTimeout(() => {
+                    container.style.display = 'none';
+                    // 1-Game Set Logic Fix:
+                    // Determine server based on toss. Let them play exactly 1 game to win.
+                    Game.currentServer = winnerText === "HUMAN" ? 'player' : 'ai';
+                    Game.initialiseMainGameInterface();
+                }, 2500);
+            }
+        }
+        animateCoin();
+    },
+
+    initialiseMainGameInterface() {
+        document.getElementById('menu-overlay').style.display = 'none';
+        const deuceDisplay = this.deuceMode === "ADVANTAGE" ? "ADVANTAGE DEUCE" : "SUDDEN DEATH";
+        let lengthDisplay = "STANDARD 6-GAME SET";
+        if (this.setLength === "1G") lengthDisplay = "1-GAME DECIDER (COIN TOSS TO SERVE)";
+        if (this.setLength === "2G") lengthDisplay = "2-GAME MINI SET";
+
+        document.getElementById('engine-mode-status').innerText = `TOURNEY: ${this.difficulty} | ${deuceDisplay} | ${lengthDisplay}`;
+        this.start();
+    },
+
+    start() {
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.isRunning = true;
+        
+        this.initListeners();
+        this.resetPosition();
+        this.loop();
+    },
+
+    initListeners() {
+        window.addEventListener('keydown', (e) => this.keys[e.code] = true);
+        window.addEventListener('keyup', (e) => this.keys[e.code] = false);
+    },
+
+    resetPosition() {
+        if (this.serveTimer) clearTimeout(this.serveTimer);
+
+        this.ball.active = false;
+        this.ball.z = 0; this.ball.vx = 0; this.ball.vy = 0; this.ball.vz = 0;
+        this.ball.spinX = 0;
+        this.ball.bounceState = 'AIRBORNE';
+        this.ball.lastHitBy = null;
+        this.ball.isServe = false; this.ball.isTossed = false;
+        this.ball.trail = [];
+        this.pointAwarded = false;
+        this.rallyCount = 0;
+        this.serveDebounce = false;
+        this.isPowerShotActive = false;
+        document.getElementById('rally-counter').innerText = `RALLY STREAK: 0`;
+
+        const scoreBox = document.getElementById('hud-scorebox');
+        if (this.currentServer === 'player') {
+            scoreBox.style.borderTopColor = 'var(--neon-blue)';
+            this.player.x = (this.score.player + this.score.ai) % 2 === 0 ? 350 : 650;
+            this.player.y = 580;
+            this.ai.x = 500; this.ai.targetX = 500; this.ai.vx = 0;
+            this.ball.x = this.player.x; this.ball.y = this.player.y - 25;
+            this.announce("YOUR SERVICE", "var(--neon-blue)");
+        } else {
+            scoreBox.style.borderTopColor = 'var(--neon-pink)';
+            this.ai.x = (this.score.player + this.score.ai) % 2 === 0 ? 350 : 650;
+            this.ai.targetX = this.ai.x; this.ai.vx = 0;
+            this.player.x = 500; this.player.y = 580;
+            this.ball.x = this.ai.x; this.ball.y = this.ai.y + 25;
+            this.announce("AI SERVICE", "var(--neon-pink)");
+            
+            this.serveTimer = setTimeout(() => this.executeAiServeRoutine(), 1200);
+        }
+    },
+
+    executeAiServeRoutine() {
+        if (!this.isRunning || this.pointAwarded) return;
+
+        this.ball.active = true;
+        this.ball.x = this.ai.x; this.ball.y = this.ai.y + 25;
+        this.ball.z = 5; this.ball.vz = 8.0;
+        this.ball.isServe = true; this.ball.isTossed = true;
+        this.ball.lastHitBy = 'ai';
+
+        let accuracyRoll = Math.random();
+        let isFault = false;
+        if (this.difficulty === "EASY" && accuracyRoll > 0.50) isFault = true;
+        if (this.difficulty === "MEDIUM" && accuracyRoll > 0.80) isFault = true;
+        if (this.difficulty === "HARD" && accuracyRoll > 0.94) isFault = true;
+
+        setTimeout(() => {
+            if (this.ball.active && this.ball.isTossed && this.ball.lastHitBy === 'ai') {
+                this.processHit('ai', isFault ? 'AI_FAULT_SERVE' : 'AI_GOOD_SERVE');
+            }
+        }, 550);
+    },
+
+    handleInput() {
+        if (this.keys['ArrowLeft'] && this.player.x > 180) this.player.x -= this.player.speed;
+        if (this.keys['ArrowRight'] && this.player.x < 820) this.player.x += this.player.speed;
+        if (this.keys['ArrowUp'] && this.player.y > 380) this.player.y -= this.player.speed;
+        if (this.keys['ArrowDown'] && this.player.y < 620) this.player.y += this.player.speed;
+
+        // Serve Initiation Sequence Loop (Fixing the spacebar bug)
+        if (this.keys['Space'] && !this.ball.active && !this.pointAwarded && this.currentServer === 'player' && !this.serveDebounce) {
+            this.ball.active = true;
+            this.ball.x = this.player.x; this.ball.y = this.player.y - 25;
+            this.ball.z = 5; this.ball.vz = 7.5;
+            this.ball.isServe = true; this.ball.isTossed = true;
+            this.ball.lastHitBy = 'player';
+            this.serveDebounce = true; // Lock out the double-press
+            
+            // Wait for keyup or a set time before allowing the strike
+            setTimeout(() => { this.serveDebounce = false; }, 300);
+            return;
+        }
+
+        // Tossing Intercept Validation Node (Fixing Spacebar Bug with vz check)
+        if (this.ball.active && this.ball.isTossed && this.ball.lastHitBy === 'player' && !this.serveDebounce) {
+            let xDiff = Math.abs(this.ball.x - this.player.x);
+            let yDiff = Math.abs(this.ball.y - this.player.y);
+            // Require the ball to be falling or at peak (vz < 1) to prevent immediate blast-offs
+            if (xDiff < 60 && yDiff < 45 && this.ball.z > 10 && this.ball.vz < 1) {
+                if (this.keys['KeyX']) this.processHit('player', 'POWER_DRIVE');
+                else if (this.keys['KeyZ']) this.processHit('player', 'SLICE_ARC');
+                else if (this.keys['Space']) this.processHit('player', 'STANDARD_FLAT');
+                this.keys['Space'] = false; // consume input
+            }
+        }
+
+        // Active Play Ground Volume Bounds Check
+        if (this.ball.active && this.ball.lastHitBy !== 'player' && !this.ball.isTossed) {
+            let xDiff = Math.abs(this.ball.x - this.player.x);
+            let yDiff = Math.abs(this.ball.y - this.player.y);
+            if (xDiff < 55 && yDiff < 40 && this.ball.z <= 55) {
+                if (this.keys['KeyX']) this.processHit('player', 'POWER_DRIVE');
+                else if (this.keys['KeyZ']) this.processHit('player', 'SLICE_ARC');
+                else if (this.keys['KeyC']) this.processHit('player', 'DROP_SHOT');
+                else if (this.keys['KeyV']) this.processHit('player', 'SMASH_STRIKE');
+                else if (this.keys['Space']) {
+                    this.processHit('player', 'STANDARD_FLAT');
+                    this.keys['Space'] = false; // consume input
+                }
+            }
+        }
+    },
+
+    triggerImpactVibe() {
+        const node = document.getElementById('shake-node');
+        node.classList.add('shake-active');
+        setTimeout(() => node.classList.remove('shake-active'), 300);
+    },
+
+    processHit(who, strikeType) {
+        this.ball.bounceState = 'AIRBORNE';
+        this.ball.lastHitBy = who;
+        this.ball.spinX = 0;
+        this.ball.isTossed = false;
+
+        if (who === 'player') {
+            this.rallyCount++;
+            document.getElementById('rally-counter').innerText = `RALLY STREAK: ${this.rallyCount}`;
+            this.isPowerShotActive = false;
+            this.ball.isServe = false;
+
+            let angleControl = (this.player.x - this.ball.x) * -0.06;
+
+            // Anti-Spam Strategy Assessment Node
+            if (strikeType === 'POWER_DRIVE' || strikeType === 'SLICE_ARC') {
+                this.playerPowerStreak++;
+                if (this.playerPowerStreak > 3) {
+                    this.aiEnforcedSmashQueued = (Math.random() < 0.75);
+                    document.getElementById('anti-spam-status').innerText = "SPAM DETECTION: CRITICAL WARNING";
+                }
+            } else {
+                this.playerPowerStreak = Math.max(0, this.playerPowerStreak - 1);
+                if (this.playerPowerStreak <= 3) {
+                    document.getElementById('anti-spam-status').innerText = "SPAM DETECTION: NOMINAL";
+                }
+            }
+
+            // Shot Vector Routing Matrix
+            if (strikeType === 'POWER_DRIVE') {
+                this.isPowerShotActive = true;
+                this.ball.vy = -12.5; this.ball.vx = angleControl * 1.1; this.ball.vz = 3.6;
+                this.announce("FAST DRIVE", "var(--neon-blue)");
+            } else if (strikeType === 'SLICE_ARC') {
+                this.ball.vy = -8.2; this.ball.vx = angleControl + (this.player.x < 500 ? 1.6 : -1.6); this.ball.vz = 5.8;
+                this.ball.spinX = this.player.x < 500 ? 1.8 : -1.8;
+                this.announce("SLICE ARC", "#ccff00");
+            } else if (strikeType === 'DROP_SHOT') {
+                this.ball.vy = -5.0; this.ball.vx = angleControl * 0.5; this.ball.vz = 4.2;
+                this.announce("DROP SHOT", "#00ffaa");
+            } else if (strikeType === 'SMASH_STRIKE') {
+                if (this.ball.z > 22) {
+                    this.isPowerShotActive = true;
+                    this.triggerImpactVibe();
+                    this.ball.vy = -16.0; this.ball.vx = angleControl * 1.4; this.ball.vz = 1.0;
+                    this.announce("CRUSHING SMASH", "var(--ball-yellow)");
+                } else {
+                    this.ball.vy = -3.5; this.ball.vz = 0.5; this.ball.vx = angleControl;
+                    this.announce("SMASH FAILURE: NET CRASH", "var(--neon-pink)");
+                }
+            } else { 
+                this.ball.vy = -9.8; this.ball.vx = angleControl; this.ball.vz = 4.2;
+            }
+
+            if (Math.abs(this.ball.vx) > 4.5) this.ball.vx = Math.sign(this.ball.vx) * 4.5;
+
+        } else {
+            // --- AI CONTEXT STRATEGY ROUTING MATRIX ---
+            if (strikeType === 'AI_FAULT_SERVE') {
+                this.ball.vy = 13.0; this.ball.vx = this.ai.x < 500 ? 3.6 : -3.6; this.ball.vz = 3.8;
+                this.ball.isServe = false; return;
+            }
+            if (strikeType === 'AI_GOOD_SERVE') {
+                this.announce("AI POWER SERVE", "var(--neon-pink)");
+                this.ball.vy = 8.5; this.ball.vz = 3.2; this.ball.vx = this.ai.x < 500 ? 2.2 : -2.2;
+                this.ball.isServe = false; return;
+            }
+
+            let errorRoll = Math.random();
+            let aiWillCommitError = false;
+            if (this.difficulty === "EASY" && errorRoll > 0.45) aiWillCommitError = true;
+            if (this.difficulty === "MEDIUM" && errorRoll > 0.82) aiWillCommitError = true;
+            if (this.difficulty === "HARD" && errorRoll > 0.95) aiWillCommitError = true;
+
+            if (this.aiEnforcedSmashQueued) {
+                this.aiEnforcedSmashQueued = false;
+                this.isPowerShotActive = true;
+                this.triggerImpactVibe();
+                this.announce("AI COUNTER SMASH!", "var(--neon-pink)");
+                let targetX = this.player.x > 500 ? 240 : 760;
+                this.ball.vy = 16.0; this.ball.vx = (targetX - this.ball.x) / 24; this.ball.vz = 1.2;
+                return;
+            }
+
+            if (aiWillCommitError) {
+                if (Math.random() > 0.4) {
+                    this.ball.vy = 15.5; this.ball.vx = Math.random() > 0.5 ? 4.2 : -4.2; this.ball.vz = 4.8;
+                    this.announce("AI UNFORCED ERROR", "#ffa200");
+                } else {
+                    this.ball.vy = 3.5; this.ball.vz = 1.0; this.ball.vx = (Math.random() - 0.5) * 1.2;
+                    this.announce("AI NET MIS-HIT", "#ffa200");
+                }
+                return;
+            }
+
+            let targetX = 220 + Math.random() * 560;
+            let targetY = Math.random() > 0.65 ? 560 : 420;
+            this.ball.vy = 9.2; this.ball.vz = 4.0;
+
+            let flightSteps = (targetY - this.ball.y) / this.ball.vy;
+            if (flightSteps <= 0) flightSteps = 35;
+            this.ball.vx = (targetX - this.ball.x) / flightSteps;
+        }
+    },
+
+    // ADVANCED AI PREDICTION MODULE (Fixing the deep-slice / edge-shot miss bug)
+    updateAI() {
+        this.ai.speed = this.difficulty === "EASY" ? 5.0 : (this.difficulty === "MEDIUM" ? 7.2 : 9.5);
+
+        if (this.ball.active && this.ball.vy < 0 && !this.ball.isTossed) {
+            this.ai.decisionTimer++;
+            if (this.ai.decisionTimer >= this.ai.reactionInterval) {
+                this.ai.decisionTimer = 0;
+                
+                // Trajectory Prediction Engine: Simulate the ball's path to find exactly where it will cross AI's Y-line
+                let simX = this.ball.x;
+                let simY = this.ball.y;
+                let simVx = this.ball.vx;
+                let simSpin = this.ball.spinX;
+                let simVy = this.ball.vy;
+                
+                // Simulate future frames
+                for (let i = 0; i < 150; i++) {
+                    simX += simVx + simSpin;
+                    simY += simVy;
+                    if (simY <= this.ai.y) break;
+                }
+
+                let errorWindow = this.difficulty === "EASY" ? 55 : (this.difficulty === "MEDIUM" ? 18 : 0);
+                this.ai.targetX = simX + ((Math.random() - 0.5) * errorWindow);
+            }
+        } else if (!this.ball.active) {
+            this.ai.targetX = (this.score.player + this.score.ai) % 2 === 0 ? 350 : 650;
+        }
+
+        let dx = this.ai.targetX - this.ai.x;
+        if (Math.abs(dx) > 10) this.ai.vx += Math.sign(dx) * 0.8;
+        else this.ai.vx *= 0.65;
+
+        if (this.ai.vx > this.ai.speed) this.ai.vx = this.ai.speed;
+        if (this.ai.vx < -this.ai.speed) this.ai.vx = -this.ai.speed;
+
+        this.ai.x += this.ai.vx;
+        // EXPANDED CLAMP: Allows AI to reach edges out to x=80 and x=920 for deep corner slices
+        this.ai.x = Math.max(80, Math.min(920, this.ai.x));
+
+        let xDiff = Math.abs(this.ball.x - this.ai.x);
+        let yDiff = Math.abs(this.ball.y - this.ai.y);
+        
+        // Dynamic interception hitbox based on difficulty
+        let interceptRangeX = this.difficulty === "HARD" ? 65 : 50;
+        
+        if (this.ball.active && this.ball.lastHitBy === 'player' && xDiff < interceptRangeX && yDiff < 30 && this.ball.z <= 60) {
+            this.processHit('ai', null);
+        }
+    },
+
+    updatePhysics() {
+        if (!this.ball.active || this.pointAwarded) return;
+
+        this.ball.trail.push({ x: this.ball.x, y: this.ball.y, z: this.ball.z });
+        if (this.ball.trail.length > this.ball.maxTrail) this.ball.trail.shift();
+
+        this.ball.x += this.ball.vx + this.ball.spinX;
+        this.ball.y += this.ball.vy;
+        this.ball.z += this.ball.vz;
+
+        if (!this.ball.isTossed) this.checkNetCollision();
+
+        if (this.ball.z > 0) {
+            this.ball.vz -= this.gravity;
+        } else {
+            this.ball.z = 0;
+            if (this.ball.isTossed) {
+                this.handleFault(); return;
+            }
+            if (this.ball.vz <= 0) {
+                this.processGroundImpactIntersection();
+                if (this.pointAwarded) return;
+                this.ball.vz = -this.ball.vz * 0.55; this.ball.z = 1.5;
+            }
+        }
+
+        // Boundary Violations Check Node
+        if (this.ball.y < 15 || this.ball.y > 635 || this.ball.x < 120 || this.ball.x > this.width - 120) {
+            if (!this.pointAwarded) {
+                if (this.ball.bounceState === 'AIRBORNE') {
+                    this.handlePoint(this.ball.lastHitBy === 'player' ? 'ai' : 'player');
+                } else {
+                    this.handlePoint(this.ball.lastHitBy === 'player' ? 'player' : 'ai');
+                }
+            }
+        }
+    },
+
+    checkNetCollision() {
+        if (this.pointAwarded) return;
+        const prevY = this.ball.trail.length > 0 ? this.ball.trail[this.ball.trail.length - 1].y : this.ball.y;
+        if ((prevY < this.netY && this.ball.y >= this.netY) || (prevY > this.netY && this.ball.y <= this.netY)) {
+            if (this.ball.z <= this.netHeight) {
+                this.announce("NET TOUCH", "var(--neon-pink)");
+                this.handlePoint(this.ball.lastHitBy === 'player' ? 'ai' : 'player');
+            }
+        }
+    },
+
+    processGroundImpactIntersection() {
+        if (this.ball.bounceState === 'FIRST_BOUNCE') {
+            this.ball.bounceState = 'DOUBLE_BOUNCE';
+            this.handlePoint(this.ball.lastHitBy === 'player' ? 'player' : 'ai');
+        } else if (this.ball.bounceState === 'AIRBORNE') {
+            this.ball.bounceState = 'FIRST_BOUNCE';
+        }
+    },
+
+    handleFault() {
+        if (this.pointAwarded) return;
+        this.pointAwarded = true;
+
+        const banner = document.getElementById('fault-banner');
+        if (this.serveAttempt === 1) {
+            this.announce("FAULT", "#ffcc00");
+            banner.innerText = "SINGLE FAULT: [1 / 2]";
+            this.serveAttempt = 2;
+            setTimeout(() => this.resetPosition(), 1200);
+        } else {
+            this.announce("DOUBLE FAULT", "var(--neon-pink)");
+            banner.innerText = ""; this.serveAttempt = 1;
+            
+            if (this.currentServer === 'player') this.score.ai++;
+            else this.score.player++;
+
+            this.checkScoreState();
+            setTimeout(() => this.resetPosition(), 1200);
+        }
+    },
+
+    handlePoint(winner) {
+        if (this.pointAwarded) return;
+        this.pointAwarded = true;
+
+        if (winner === 'player') {
+            this.score.player++;
+            this.memoryHistory.currentSet.playerPointsWon++;
+        } else {
+            this.score.ai++;
+            this.memoryHistory.currentSet.aiPointsWon++;
+        }
+
+        this.serveAttempt = 1;
+        document.getElementById('fault-banner').innerText = "";
+        this.checkScoreState();
+
+        this.announce(winner === 'player' ? "POINT TO YOU" : "POINT TO AI", winner === 'player' ? 'var(--neon-blue)' : 'var(--neon-pink)');
+        setTimeout(() => this.resetPosition(), 1300);
+    },
+
+    checkScoreState() {
+        const p = this.score.player; const a = this.score.ai;
+
+        if (this.isTiebreak) {
+            if (p >= 7 && (p - a) >= 2) {
+                this.score.gamesP++; this.closeOutSet('player');
+            } else if (a >= 7 && (a - p) >= 2) {
+                this.score.gamesA++; this.closeOutSet('ai');
+            }
+        } else {
+            if (p >= 3 && a >= 3) {
+                if (this.deuceMode === "SUDDEN_DEATH") {
+                    if (p > a) {
+                        this.score.gamesP++; this.resetGameScore(); this.alternateServerCheck();
+                    } else if (a > p) {
+                        this.score.gamesA++; this.resetGameScore(); this.alternateServerCheck();
+                    }
+                } else { 
+                    if (p >= 4 && (p - a) >= 2) {
+                        this.score.gamesP++; this.resetGameScore(); this.alternateServerCheck();
+                    } else if (a >= 4 && (a - p) >= 2) {
+                        this.score.gamesA++; this.resetGameScore(); this.alternateServerCheck();
+                    }
+                }
+            } else {
+                if (p === 4) {
+                    this.score.gamesP++; this.resetGameScore(); this.alternateServerCheck();
+                } else if (a === 4) {
+                    this.score.gamesA++; this.resetGameScore(); this.alternateServerCheck();
+                }
+            }
+
+            // --- SET PARAMETERS PROCESSING MATRIX ---
+            const gp = this.score.gamesP; const ga = this.score.gamesA;
+            
+            // Fix for 1-Game Set
+            if (this.setLength === "1G") {
+                if (gp === 1) {
+                    this.closeOutSet('player');
+                } else if (ga === 1) {
+                    this.closeOutSet('ai');
+                }
+            } else if (this.setLength === "2G") {
+                if (gp === 1 && ga === 1) {
+                    this.isTiebreak = true; this.announce("TIEBREAK DECIER", "var(--ball-yellow)");
+                } else if (gp >= 2 && (gp - ga) >= 1) {
+                    this.closeOutSet('player');
+                } else if (ga >= 2 && (ga - gp) >= 1) {
+                    this.closeOutSet('ai');
+                }
+            } else { 
+                if (gp === 6 && ga === 6) {
+                    this.isTiebreak = true; this.announce("TIEBREAK", "var(--ball-yellow)");
+                } else if (gp >= 6 && (gp - ga) >= 2) {
+                    this.closeOutSet('player');
+                } else if (ga >= 6 && (ga - gp) >= 2) {
+                    this.closeOutSet('ai');
+                }
+            }
+        }
+        this.updateScoreboard();
+    },
+
+    resetGameScore() {
+        this.score.player = 0; this.score.ai = 0;
+    },
+
+    alternateServerCheck() {
+        this.currentServer = this.currentServer === 'player' ? 'ai' : 'player';
+    },
+
+    closeOutSet(winner) {
+        if (winner === 'player') this.score.setsP++;
+        else this.score.setsA++;
+
+        this.isRunning = false;
+        this.displayStatsSummaryModal();
+    },
+
+    displayStatsSummaryModal() {
+        document.getElementById('stat-games-p').innerText = this.score.gamesP;
+        document.getElementById('stat-games-a').innerText = this.score.gamesA;
+        document.getElementById('stat-pts-p').innerText = this.memoryHistory.currentSet.playerPointsWon;
+        document.getElementById('stat-pts-a').innerText = this.memoryHistory.currentSet.aiPointsWon;
+        document.getElementById('stat-match-sets').innerText = `${this.score.setsP} - ${this.score.setsA} Set`;
+
+        if (this.score.setsP === this.maxSetsToWin || this.score.setsA === this.maxSetsToWin) {
+            document.getElementById('modal-title').innerText = this.score.setsP > this.score.setsA ? "MATCH OVER: YOU WIN!" : "MATCH OVER: AI WINS!";
+            document.getElementById('modal-continue-btn').innerText = "REBOOT CORE PROFILE";
+            document.getElementById('modal-continue-btn').onclick = () => window.location.reload();
+        } else {
+            document.getElementById('modal-title').innerText = "SET COMPLETED";
+            document.getElementById('modal-continue-btn').innerText = "DISPATCH NEXT SET";
+            document.getElementById('modal-continue-btn').onclick = () => Game.dismissStatsModal();
+        }
+        document.getElementById('stats-overlay').style.display = 'flex';
+    },
+
+    dismissStatsModal() {
+        document.getElementById('stats-overlay').style.display = 'none';
+        this.score.gamesP = 0; this.score.gamesA = 0;
+        this.resetGameScore(); this.isTiebreak = false;
+        this.memoryHistory.currentSet = { playerPointsWon: 0, aiPointsWon: 0 };
+        this.alternateServerCheck();
+        this.isRunning = true;
+        this.resetPosition();
+    },
+
+    updateScoreboard() {
+        const p = this.score.player; const a = this.score.ai;
+        let pText, aText;
+
+        if (this.isTiebreak) {
+            pText = p.toString(); aText = a.toString();
+        } else {
+            if (p >= 3 && a >= 3) {
+                if (p === a) {
+                    pText = "DEUCE"; aText = "DEUCE";
+                } else {
+                    if (this.deuceMode === "SUDDEN_DEATH") {
+                        pText = "40"; aText = "40";
+                    } else {
+                        pText = p > a ? "ADVANTAGE" : "40";
+                        aText = a > p ? "ADVANTAGE" : "40";
+                    }
+                }
+            } else {
+                pText = this.score.pointsMap[p] || "LOVE";
+                aText = this.score.pointsMap[a] || "LOVE";
+            }
+        }
+
+        document.getElementById('player-points').innerText = pText;
+        document.getElementById('ai-points').innerText = aText;
+        document.getElementById('sets-summary').innerText = `SETS: ${this.score.setsP} - ${this.score.setsA} | GAMES: ${this.score.gamesP} - ${this.score.gamesA}`;
+    },
+
+    announce(txt, col) {
+        const el = document.getElementById('announcer');
+        el.innerText = txt; el.style.color = col; el.style.opacity = 1;
+        if (this.msgTimer) clearTimeout(this.msgTimer);
+        this.msgTimer = setTimeout(() => el.style.opacity = 0, 1100);
+    },
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.width, this.height);
+
+        this.drawCourtLines(ctx);
+        this.drawNetMeshStructure(ctx);
+
+        this.drawPaddleNode(this.player.x, this.player.y, this.player.w, this.player.h, this.player.color, true);
+        this.drawPaddleNode(this.ai.x, this.ai.y, this.ai.w, this.ai.h, 'var(--neon-pink)', true);
+
+        if (this.ball.active) {
+            ctx.fillStyle = 'rgba(0, 4, 2, 0.45)';
+            ctx.beginPath();
+            ctx.ellipse(this.ball.x, this.ball.y, 7 + (this.ball.z * 0.04), 3.5 + (this.ball.z * 0.02), 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            let trailColor = this.isPowerShotActive ? '255, 0, 85' : '204, 255, 0';
+            for (let i = 0; i < this.ball.trail.length; i++) {
+                let opacity = (i / this.ball.trail.length) * 0.3;
+                let size = (i / this.ball.trail.length) * this.ball.radius;
+                ctx.fillStyle = `rgba(${trailColor}, ${opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.ball.trail[i].x, this.ball.trail[i].y - this.ball.trail[i].z, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.fillStyle = this.isPowerShotActive ? 'var(--neon-pink)' : 'var(--ball-yellow)';
+            ctx.shadowBlur = this.isPowerShotActive ? 22 : 12; ctx.shadowColor = ctx.fillStyle;
+            ctx.beginPath(); ctx.arc(this.ball.x, this.ball.y - this.ball.z, this.ball.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+        } else {
+            if (this.currentServer === 'ai') {
+                ctx.fillStyle = 'rgba(255, 0, 85, 0.4)';
+                ctx.beginPath(); ctx.arc(this.ai.x, this.ai.y + 25, 6, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+    },
+
+    drawCourtLines(ctx) {
+        let gridCol = (this.isTiebreak || (this.score.player >= 3 && this.score.ai >= 3)) ? 'rgba(204, 255, 0, 0.22)' : 'rgba(0, 242, 255, 0.13)';
+        ctx.strokeStyle = gridCol; ctx.lineWidth = 4;
+        ctx.strokeRect(150, 40, 700, 570);
+        ctx.strokeRect(200, 40, 600, 570);
+
+        ctx.beginPath();
+        ctx.moveTo(200, 185); ctx.lineTo(800, 185);
+        ctx.moveTo(200, 425); ctx.lineTo(800, 425);
+        ctx.moveTo(500, 185); ctx.lineTo(500, 425);
+        ctx.stroke();
+    },
+
+    drawNetMeshStructure(ctx) {
+        ctx.lineWidth = 6; ctx.strokeStyle = "#0b1a16";
+        ctx.beginPath(); ctx.moveTo(135, this.netY); ctx.lineTo(135, this.netY - this.netHeight); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(865, this.netY); ctx.lineTo(865, this.netY - this.netHeight); ctx.stroke();
+
+        ctx.fillStyle = "rgba(0, 242, 255, 0.03)";
+        ctx.fillRect(140, this.netY - this.netHeight, 720, this.netHeight);
+
+        ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(135, this.netY - this.netHeight); ctx.lineTo(865, this.netY - this.netHeight); ctx.stroke();
+    },
+
+    drawPaddleNode(x, y, w, h, col, glow) {
+        if (glow) { this.ctx.shadowBlur = 15; this.ctx.shadowColor = col; }
+        this.ctx.fillStyle = col;
+        this.ctx.fillRect(x - w / 2, y - h / 2, w, h);
+        this.ctx.shadowBlur = 0;
+    },
+
+    loop() {
+        if (!this.isRunning) return;
+        this.handleInput();
+        this.updatePhysics();
+        this.updateAI();
+        this.draw();
+        requestAnimationFrame(() => this.loop());
+    }
+};
+</script>
+</body>
+</html>
